@@ -1,0 +1,51 @@
+<robot name="abstract_main_wing">
+  <link name="abstract_main_wing">
+    <collision>
+      <origin xyz="-0.2375 0 0" />
+      <geometry>
+        <box size="0.325 0.30 0.025" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="-0.2375 0 0" />
+      <material name="c">
+        <color rgba="1.0 0 0 1.0" />
+      </material>
+      <geometry>
+        <box size="0.325 0.30 0.025" />
+      </geometry>
+    </visual>
+
+    <collision>
+      <origin xyz="0 -0.05 0" />
+      <geometry>
+        <box size="0.15 0.20 0.025" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 -0.05 0" />
+      <material name="c">
+        <color rgba="1.0 0 0 1.0" />
+      </material>
+      <geometry>
+        <box size="0.15 0.20 0.025" />
+      </geometry>
+    </visual>
+
+    <collision>
+      <origin xyz="0.2375 0 0" />
+      <geometry>
+        <box size="0.325 0.30 0.025" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.2375 0 0" />
+      <material name="c">
+        <color rgba="1.0 0 0 1.0" />
+      </material>
+      <geometry>
+        <box size="0.325 0.30 0.025" />
+      </geometry>
+    </visual>
+  </link>
+</robot>
