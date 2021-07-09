@@ -6,7 +6,7 @@ import sys
 import time
 import numpy as np
 #from moveit_ros_planning_interface._moveit_roscpp_initializer import roscpp_init
-#from adarrt import AdaRRT
+from adarrt import AdaRRT
 import pickle
 
 
@@ -48,6 +48,8 @@ def createTSR(partPose, hand):
 
 
     partTSR_Tw_e = np.matmul(rot_trans, hand.get_endeffector_transform("cylinder"))
+    partTSR_Tw_e[2:3] += 0.1
+    partTSR_Tw_e[0:3] += 0.05
     
 
     partTSR.set_Tw_e(partTSR_Tw_e)
@@ -74,41 +76,41 @@ if not rospy.is_shutdown():
 
     viewer = ada.start_viewer("dart_markers/simple_trajectories", "map")
 
-    obj1URDFUri = "package://pr_assets/data/objects/container_3.urdf"
+    obj1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
     object1Pose = [0.21, 0.44, 0.038, 0.707, 0., 0., 0.707]
 
-    obj2URDFUri = "package://pr_assets/data/objects/container_3.urdf"
+    obj2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
     object2Pose = [0.00, 0.44, 0.038, 0.707, 0., 0., 0.707]  # [0.00, -0.5, 0.012, 0.707, 0., 0., 0.707]
 
-    obj3URDFUri = "package://pr_assets/data/objects/container_2.urdf"
+    obj3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
     object3Pose = [-0.14, 0.42, 0.032, 0.707, 0., 0., 0.707]
 
-    obj4URDFUri = "package://pr_assets/data/objects/container_2.urdf"
+    obj4URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
     object4Pose = [-0.24, 0.44, 0.032, 0.707, 0., 0., 0.707]
 
-    obj5URDFUri = "package://pr_assets/data/objects/container_2.urdf"
+    obj5URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
     object5Pose = [0.00, 0.62, 0.095, 0.707, 0., 0., 0.707]
 
-    obj6URDFUri = "package://pr_assets/data/objects/container_2.urdf"
+    obj6URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
     object6Pose = [-0.10, 0.58, 0.095, 0.707, 0., 0., 0.707]
 
-    wingURDFUri = "package://pr_assets/data/objects/abstract_main_wing.urdf"
+    wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
     wingPose = [0, 0.5, 0.1, 0.7071068, 0, 0, -0.7071068]
 
-    storageURDFUri = "package://pr_assets/data/objects/storage.urdf"
-    storagePose = [3, 0, 0, 0, 0, 0, 0]
+    storageURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/storage.urdf"
+    storagePose = [-0.4, -0.2, -0.77, 0, 0, 0, 0]
     
 
-    container2_1URDFUri = "package://pr_assets/data/objects/container_2.urdf"
-    container2_1Pose = [0.2275, -0.1, 0.4, 0.7071068, 0, 0, 0.7071068]
+    container2_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
+    container2_1Pose = [0.6, -0.1, 0., 0.7071068, 0, 0, 0.7071068]
 
-    container1_1URDFUri = "package://pr_assets/data/objects/container_1.urdf"
+    container1_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
     container1_1Pose = [3.2975, 0.5, 0.7825, 0, 0, 0, 0]
     
-    container3_1URDFUri = "package://pr_assets/data/objects/container_3.urdf"
+    container3_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
     container3_1Pose = [3.1275, 0.5, 0.7825, 0, 0, 0, 0]
     
-    #container1_2URDFUri = "package://pr_assets/data/objects/container_1.urdf"
+    #container1_2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
     container1_2Pose = [2.9575, 0.5, 0.7825, 0, 0, 0, 0]
 
     container3_2Pose = [2.7875, 0.5, 0.7825, 0, 0, 0, 0]
@@ -260,18 +262,37 @@ if not rospy.is_shutdown():
 
     marker9 = viewer.add_tsr_marker(object9TSR)
 
+    # ------------------ Collision detection ----------------- #
 
+    collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
+                                                                           [container2_1])
+    full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
+                                                                         ada.get_arm_skeleton(),
+                                                                         collision_free_constraint)
+    collision = ada.get_self_collision_constraint()
 
-     # ------------------ Move robot to start configuration ----------------- #
+    # ------------------ Move robot to start configuration ----------------- #
 
     #target waypoint: [-2.77053788,  4.20495852,  1.98182475, -3.38792973,  0.04354109, 0.33316412]
     #armHome = [-1.5094078 ,  2.92774907,  1.08108148, -1.30679823,  1.72727102, 2.50344173]
 
+    startState = [0., 0., 0., 0., 0., 0.]
     armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
-    print("Moving robot to home location...")
-    waypoints = [(0.0, positions), (1.0, armHome)]
-    trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
+    # waypoints = [(0.0, positions), (1.0, armHome)]
+    # trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
+
+    trajectory = None
+    adaRRT = AdaRRT(start_state=np.array(startState), goal_state=np.array(armHome), step_size=0.01,
+                            goal_precision=0.2, ada=ada, objects=[container2_1])
+    path = adaRRT.build()
+    trajectory = None
+    if path is not None:
+        waypoints = []
+        for i, waypoint in enumerate(path):
+            waypoints.append((0.0 + i, waypoint))
+        trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
     
+    raw_input("Press Enter to move robot to home location...")
     ada.execute_trajectory(trajectory)
     closeHand(hand, [0.5, 0.5])
     time.sleep(3)
@@ -333,6 +354,8 @@ if not rospy.is_shutdown():
             print("Failed to find a solution!")
         else:
             print("Found a trajectory! Executing...")
+
+            raw_input("Press enter to execute trajectory...")
 
             ada.execute_trajectory(trajectory)
 
