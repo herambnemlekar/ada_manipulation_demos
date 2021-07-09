@@ -102,24 +102,24 @@ if not rospy.is_shutdown():
     
 
     container2_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    container2_1Pose = [0.6, -0.1, 0., 0.7071068, 0, 0, 0.7071068]
+    container2_1Pose = [0.6, -0.1, 0, 0.7071068, 0, 0, 0.7071068]
 
     container1_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_1Pose = [3.2975, 0.5, 0.7825, 0, 0, 0, 0]
+    container1_1Pose = [0.2975, -0.1, 0, 0, 0, 0, 0]
     
     container3_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    container3_1Pose = [3.1275, 0.5, 0.7825, 0, 0, 0, 0]
+    container3_1Pose = [0.1275, -0.1, 0, 0, 0, 0, 0]
     
     #container1_2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_2Pose = [2.9575, 0.5, 0.7825, 0, 0, 0, 0]
+    container1_2Pose = [-0.0425, -0.1, 0, 0, 0, 0, 0]
 
-    container3_2Pose = [2.7875, 0.5, 0.7825, 0, 0, 0, 0]
+    container3_2Pose = [-0.2125, -0.1, 0, 0, 0, 0, 0]
 
-    container1_3Pose = [2.6175, 0.5, 0.7825, 0, 0, 0, 0]
+    container1_3Pose = [-0.3825, -0.1, 0, 0, 0, 0, 0]
 
-    container2_2Pose = [2.4875, 0.5, 0.7825, 0, 0, 0, 0]
+    container2_2Pose = [-0.5125, -0.1, 0, 0, 0, 0, 0]
 
-    container1_3Pose = [2.3575, 0.5, 0.7825, 0, 0, 0, 0]
+    container1_3Pose = [-0.6425, -0.1, 0, 0, 0, 0, 0]
     
 
     world = ada.get_world()
