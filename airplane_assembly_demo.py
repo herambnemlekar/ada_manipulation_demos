@@ -50,7 +50,7 @@ def createTSR(partPose, hand):
     partTSR_Tw_e = np.matmul(rot_trans, hand.get_endeffector_transform("cylinder"))
     # partTSR_Tw_e[2:3] += 0.05
     # partTSR_Tw_e[1:3] += 0.05
-    # partTSR_Tw_e[0:3] += 0.05
+    partTSR_Tw_e[0] += 0.05
     
 
     # set the transformed TSR
@@ -136,12 +136,12 @@ if not rospy.is_shutdown():
     # ----------------------- Create TSR for grasping ----------------------- #
 
 
-    container1_1PoseMat = [[0.0, 0.0, 1.0, container1_1Pose[0]],
-                           [0.0, -1.0, 0.0, container1_1Pose[1]],
-                           [1.0, 0.0, 0.0, container1_1Pose[2]],
-                           [0.0, 0.0, 0.0, 1.0]]
-    container1_1TSR = createTSR(container1_1PoseMat, hand)
-    container1_1marker = viewer.add_tsr_marker(container1_1TSR)
+    #container1_1PoseMat = [[0.0, 0.0, 1.0, container1_1Pose[0]],
+    #                       [0.0, -1.0, 0.0, container1_1Pose[1]],
+    #                       [1.0, 0.0, 0.0, container1_1Pose[2]],
+    #                       [0.0, 0.0, 0.0, 1.0]]
+    #container1_1TSR = createTSR(container1_1PoseMat, hand)
+    #container1_1marker = viewer.add_tsr_marker(container1_1TSR)
 
 
     choosed_objectPose = wingPose
@@ -167,12 +167,18 @@ if not rospy.is_shutdown():
     marker2 = viewer.add_tsr_marker(object2TSR)
 
     choosed_object3Pose = container1_1Pose
+    object3PoseMat = [[0.0, 0.0, 1.0, choosed_object3Pose[0]],
+                      [0.0, -1.0, 0.0, choosed_object3Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object3Pose[2]],
+                      [0.0, 0.0, 0.0, 1.0]]
+    object3TSR = createTSR(object3PoseMat,hand)
+    marker3 = viewer.add_tsr_marker(object3TSR)
 
     choosed_object4Pose = container3_1Pose
 
     object4PoseMat = [[0.0, 0.0, 1.0, choosed_object4Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object4Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object4Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object4Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object4Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object4TSR = createTSR(object4PoseMat,hand)
 
@@ -182,8 +188,8 @@ if not rospy.is_shutdown():
     choosed_object5Pose = container1_2Pose
 
     object5PoseMat = [[0.0, 0.0, 1.0, choosed_object5Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object5Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object5Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object5Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object5Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object5TSR = createTSR(object5PoseMat,hand)
 
@@ -193,8 +199,8 @@ if not rospy.is_shutdown():
     choosed_object6Pose = container3_2Pose
 
     object6PoseMat = [[0.0, 0.0, 1.0, choosed_object6Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object6Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object6Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object6Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object6Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object6TSR = createTSR(object6PoseMat,hand)
 
@@ -204,8 +210,8 @@ if not rospy.is_shutdown():
     choosed_object7Pose = container1_3Pose
 
     object7PoseMat = [[0.0, 0.0, 1.0, choosed_object7Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object7Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object7Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object7Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object7Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object7TSR = createTSR(object7PoseMat,hand)
 
@@ -215,8 +221,8 @@ if not rospy.is_shutdown():
     choosed_object8Pose = container2_2Pose
 
     object8PoseMat = [[0.0, 0.0, 1.0, choosed_object8Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object8Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object8Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object8Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object8Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object8TSR = createTSR(object8PoseMat,hand)
 
@@ -226,18 +232,26 @@ if not rospy.is_shutdown():
     choosed_object9Pose = container1_3Pose
 
     object9PoseMat = [[0.0, 0.0, 1.0, choosed_object9Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object9Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object9Pose[2]],
+                      [0.0, -1.0, 0.0, choosed_object9Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object9Pose[2]],
                       [0.0, 0.0, 0.0, 1.0]]
     object9TSR = createTSR(object9PoseMat,hand)
 
 
     marker9 = viewer.add_tsr_marker(object9TSR)
 
+    choosed_object10Pose = container1_4Pose
+    object10PoseMat = [[0.0, 0.0, 1.0, choosed_object10Pose[0]],
+                      [0.0, -1.0, 0.0, choosed_object10Pose[1]],
+                      [1.0, 0.0, 0.0, choosed_object10Pose[2]],
+                      [0.0, 0.0, 0.0, 1.0]]
+    object10TSR = createTSR(object10PoseMat,hand)
+    marker10 = viewer.add_tsr_marker(object10TSR)
+
     # ------------------ Collision detection ----------------- #
 
     collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
-                                                                           [container2_1])
+                                                                           [container1_4])
     full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
                                                                          ada.get_arm_skeleton(),
                                                                          collision_free_constraint)
@@ -271,7 +285,7 @@ if not rospy.is_shutdown():
 
     # ------------------------ Setup IK for grasping ------------------------ #
     
-    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, object2TSR, hand_node)
+    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, object10TSR, hand_node)
     ik_generator = ik_sampleable.create_sample_generator()
     configurations = []
     samples = 0
@@ -335,7 +349,7 @@ if not rospy.is_shutdown():
 
             time.sleep(4)
 
-            hand.grab(container2_1)
+            hand.grab(container1_4)
 
 
             # next step transfer Jacobian pseudo-inverse for forward motion
