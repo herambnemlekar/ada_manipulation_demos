@@ -250,19 +250,19 @@ if not rospy.is_shutdown():
 
     startState = [0., 0., 0., 0., 0., 0.]
     armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
-    # waypoints = [(0.0, positions), (1.0, armHome)]
-    # trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
+    waypoints = [(0.0, positions), (1.0, armHome)]
+    trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
 
-    trajectory = None
-    adaRRT = AdaRRT(start_state=np.array(startState), goal_state=np.array(armHome), step_size=0.01,
-                            goal_precision=0.2, ada=ada, objects=[container2_1])
-    path = adaRRT.build()
-    trajectory = None
-    if path is not None:
-        waypoints = []
-        for i, waypoint in enumerate(path):
-            waypoints.append((0.0 + i, waypoint))
-        trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
+    # trajectory = None
+    # adaRRT = AdaRRT(start_state=np.array(startState), goal_state=np.array(armHome), step_size=0.01,
+    #                         goal_precision=0.2, ada=ada, objects=[container2_1])
+    # path = adaRRT.build()
+    # trajectory = None
+    # if path is not None:
+    #     waypoints = []
+    #     for i, waypoint in enumerate(path):
+    #         waypoints.append((0.0 + i, waypoint))
+    #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
     
     raw_input("Press Enter to move robot to home location...")
     ada.execute_trajectory(trajectory)
@@ -335,7 +335,7 @@ if not rospy.is_shutdown():
 
             time.sleep(4)
 
-            #closeHand(hand, [0.3, 0.3])
+            hand.grab(container2_1)
 
 
             # next step transfer Jacobian pseudo-inverse for forward motion
@@ -379,19 +379,19 @@ if not rospy.is_shutdown():
 
             # --------------- Move grasped object to workbench -------------- #
 
-            targetWaypt = [-3.41037512,  2.48071804,  4.96467289, -3.48166341,  0.68219961, -2.10886992]
-            waypoints = [(0.0,upWaypt),(1.0,targetWaypt)]
-            traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            ada.execute_trajectory(traj)
-            time.sleep(3)
-            closeHand(hand, [0.3, 0.3])
+            # targetWaypt = [-3.41037512,  2.48071804,  4.96467289, -3.48166341,  0.68219961, -2.10886992]
+            # waypoints = [(0.0,upWaypt),(1.0,targetWaypt)]
+            # traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+            # ada.execute_trajectory(traj)
+            # time.sleep(3)
+            # closeHand(hand, [0.3, 0.3])
 
             # ------------------- Move robot back to home ------------------- #
 
-            waypoints = [(0.0,targetWaypt),(1.0,armHome)]
-            traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            ada.execute_trajectory(traj)
-            time.sleep(2)
+            # waypoints = [(0.0,targetWaypt),(1.0,armHome)]
+            # traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+            # ada.execute_trajectory(traj)
+            # time.sleep(2)
 
     # --------- Stop executor for real robot (not needed for sim) ----------- #
     if not sim:
