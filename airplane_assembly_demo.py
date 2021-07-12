@@ -262,14 +262,13 @@ if not rospy.is_shutdown():
     #target waypoint: [-2.77053788,  4.20495852,  1.98182475, -3.38792973,  0.04354109, 0.33316412]
     #armHome = [-1.5094078 ,  2.92774907,  1.08108148, -1.30679823,  1.72727102, 2.50344173]
 
-    startState = [0., 0., 0., 0., 0., 0.]
     armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
     waypoints = [(0.0, positions), (1.0, armHome)]
     trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
 
     # trajectory = None
-    # adaRRT = AdaRRT(start_state=np.array(startState), goal_state=np.array(armHome), step_size=0.01,
-    #                         goal_precision=0.2, ada=ada, objects=[container2_1])
+    # adaRRT = AdaRRT(start_state=np.array(positions), goal_state=np.array(armHome), step_size=0.1,
+    #                         goal_precision=0.2, ada=ada, objects=[storageInWorld])
     # path = adaRRT.build()
     # trajectory = None
     # if path is not None:
@@ -305,34 +304,25 @@ if not rospy.is_shutdown():
     else:
         print("IK Configuration found!")
 
-        #ada.set_arm_positions(configurations[0])
-
-        #collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(),
-         #                                                                   ada.get_arm_skeleton(),
-         #                                                                   [obj1,obj2,obj3,obj4])
-        #full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
-        #                                                                      ada.get_arm_skeleton(),
-        #                                                                      collision_free_constraint)
         collision = ada.get_self_collision_constraint()
 
         # trajectory = None
-        # for configuration in configurations:
-        #     adaRRT = AdaRRT(start_state=np.array(armHome), goal_state=np.array(configuration), step_size=0.01,
-        #                             goal_precision=0.2, ada=ada, objects=[obj1])
-        #     path = adaRRT.build()
-        #     trajectory = None
-        #     if path is not None:
-        #         waypoints = []
-        #         for i, waypoint in enumerate(path):
-        #             waypoints.append((0.0 + i, waypoint))
-        #         trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
+        # adaRRT = AdaRRT(start_state=np.array(armHome), goal_state=np.array(configuration[0]), step_size=0.05,
+        #                         goal_precision=0.1, ada=ada, objects=[storageInWorld])
+        # path = adaRRT.build()
+        # trajectory = None
+        # if path is not None:
+        #     waypoints = []
+        #     for i, waypoint in enumerate(path):
+        #         waypoints.append((0.0 + i, waypoint))
+        #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
        
         waypoints = [(0.0,armHome),(1.0,configurations[0])]
         trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
 
-        #tFile = open("trojectCSV/1.txt","w")
-        #pickle.dump(trajectory,tFile)
-        #tFile.close()
+        # tFile = open("trojectCSV/1.txt","w")
+        # pickle.dump(trajectory,tFile)
+        # tFile.close()
 
         # ------------------ Execute path to grasp object ------------------- #
 
@@ -391,7 +381,14 @@ if not rospy.is_shutdown():
             ada.execute_trajectory(traj)
             time.sleep(3)
 
-            # --------------- Move grasped object to workbench -------------- #
+            hand.ungrab(container1_4)
+
+            # --------------- Move grasped object to workbench -------------- #\
+
+            # Set target TSR for workbench
+            # Find configuration for target TSR using inverse kinematics
+            # Plan to target configuration using adarrt
+            # execute trajectory to move container to target TSR on the workbench
 
             # targetWaypt = [-3.41037512,  2.48071804,  4.96467289, -3.48166341,  0.68219961, -2.10886992]
             # waypoints = [(0.0,upWaypt),(1.0,targetWaypt)]
@@ -402,10 +399,10 @@ if not rospy.is_shutdown():
 
             # ------------------- Move robot back to home ------------------- #
 
-            # waypoints = [(0.0,targetWaypt),(1.0,armHome)]
-            # traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            # ada.execute_trajectory(traj)
-            # time.sleep(2)
+            waypoints = [(0.0,configurations[0]),(1.0,armHome)]
+            traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+            ada.execute_trajectory(traj)
+            time.sleep(2)
 
     # --------- Stop executor for real robot (not needed for sim) ----------- #
     if not sim:

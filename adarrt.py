@@ -34,8 +34,8 @@ class AdaRRT():
         self.goal = AdaRRT.Node(goal_state, None)
         self.max_itr = max_itr
         self.ada = ada
-        self.position_lower_limits = np.array([-3.14, 1.57, 0.33, -3.14, 0, 0])
-        self.position_upper_limits = np.array([3.14, 5.00, 5.00, 3.14, 3.14, 3.14])
+        self.position_lower_limits = np.array([-3.14, -3.14, -3.14, -3.14, -3.14, -3.14])
+        self.position_upper_limits = np.array([3.14, 3.14, 3.14, 3.14, 3.14, 3.14])
         self.step_size = step_size
         self.goal_precision = goal_precision
         self.min_err = 1000
@@ -52,19 +52,21 @@ class AdaRRT():
     def build(self):
         for k in range(self.max_itr):
   
-            # Sample a random node
-            if np.random.random_sample(1)>0.8:
-              random_state = self._get_random_state()
+            # sample a random node
+            if np.random.random_sample(1) > 0.8:
+                random_state = self._get_random_state()
             else:
-              random_state = self._get_random_state_near_goal()
+                random_state = self._get_random_state_near_goal()
+
+
             # find nearest neighbor
             nearest_neighbor = self._get_nearest_neighbor(random_state)
   
             # too close
             if np.linalg.norm(nearest_neighbor.state - random_state) < self.step_size:
-              continue
+                print("Too close.")
+                continue
           
-
             # extend RRT
             new_node = self._extend_sample(random_state, nearest_neighbor)
             if not new_node:
@@ -76,6 +78,7 @@ class AdaRRT():
               self.min_err = err
               print(self.min_err)
             if err < self.goal_precision:
+                print("close to goal.")
                 self.goal.parent = new_node
                 path = self._trace_path_to_goal()
                 return path
@@ -83,7 +86,7 @@ class AdaRRT():
     def _get_random_state_near_goal(self):
         state = np.random.random_sample(self.position_lower_limits.size)
         state = state * 0.1
-        state = self.goal.state-0.05 + state
+        state = self.goal.state + state
         return state
 
     def _get_random_state(self):
@@ -91,7 +94,6 @@ class AdaRRT():
         state = np.random.random_sample(self.position_lower_limits.size)
         state = state * (self.position_upper_limits - self.position_lower_limits)
         state = state + self.position_lower_limits
-
 
         return state
 
@@ -113,6 +115,7 @@ class AdaRRT():
         # build a new node and add it to the tree
         new_node = AdaRRT.Node(new_node_state, neighbor)
         neighbor.children.append(new_node)
+
         return new_node
 
     def _trace_path_to_goal(self, node=None):
@@ -132,7 +135,7 @@ class AdaRRT():
         return waypoints
 
     def _check_for_collision(self, new_node_state):
-        return self.full_collision_free_constraint.is_satisfied(self.ada.get_arm_state_space(), self.ada.get_arm_skeleton(), new_node_state)
+        return not self.full_collision_free_constraint.is_satisfied(self.ada.get_arm_state_space(), self.ada.get_arm_skeleton(), new_node_state)
 
 
 def runRRT(start_state, goal_state, step_size, goal_precision, ada, objects):
