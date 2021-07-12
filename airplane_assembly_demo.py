@@ -2,12 +2,12 @@
 
 import adapy
 import rospy
-import sys
-import time
-import numpy as np
-#from moveit_ros_planning_interface._moveit_roscpp_initializer import roscpp_init
-from adarrt import AdaRRT
+import sys, time
 import pickle
+import numpy as np
+from adarrt import AdaRRT
+
+# from moveit_ros_planning_interface._moveit_roscpp_initializer import roscpp_init
 
 
 def createBwMatrixforTSR():
@@ -40,18 +40,20 @@ def createTSR(partPose, hand):
     :returns: A fully initialized TSR.
     """
 
+    # set the part TSR at the part pose
     partTSR = adapy.get_default_TSR()
     partTSR.set_T0_w(partPose)
 
+    # transform the TSR to desired grasping pose
     rot_trans = np.eye(4)
     rot_trans[0:3, 0:3] = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
-
-
     partTSR_Tw_e = np.matmul(rot_trans, hand.get_endeffector_transform("cylinder"))
-    partTSR_Tw_e[2:3] += 0.1
-    partTSR_Tw_e[0:3] += 0.05
+    # partTSR_Tw_e[2:3] += 0.05
+    # partTSR_Tw_e[1:3] += 0.05
+    # partTSR_Tw_e[0:3] += 0.05
     
 
+    # set the transformed TSR
     partTSR.set_Tw_e(partTSR_Tw_e)
     Bw = createBwMatrixforTSR()
     partTSR.set_Bw(Bw)
@@ -62,9 +64,12 @@ def closeHand(hand, displacement):
     hand.execute_preshape(displacement)
 
 
-#roscpp_init('airplane_assembly', [])
+# ----------------------------------- MAIN ---------------------------------- #
+
 rospy.init_node("adapy_assembly")
 rate = rospy.Rate(10)
+
+# roscpp_init('airplane_assembly', [])
 
 if not rospy.is_shutdown():
 
@@ -76,70 +81,38 @@ if not rospy.is_shutdown():
 
     viewer = ada.start_viewer("dart_markers/simple_trajectories", "map")
 
-    obj1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    object1Pose = [0.21, 0.44, 0.038, 0.707, 0., 0., 0.707]
-
-    obj2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    object2Pose = [0.00, 0.44, 0.038, 0.707, 0., 0., 0.707]  # [0.00, -0.5, 0.012, 0.707, 0., 0., 0.707]
-
-    obj3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    object3Pose = [-0.14, 0.42, 0.032, 0.707, 0., 0., 0.707]
-
-    obj4URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    object4Pose = [-0.24, 0.44, 0.032, 0.707, 0., 0., 0.707]
-
-    obj5URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    object5Pose = [0.00, 0.62, 0.095, 0.707, 0., 0., 0.707]
-
-    obj6URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    object6Pose = [-0.10, 0.58, 0.095, 0.707, 0., 0., 0.707]
-
     wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
-    wingPose = [0, 0.5, 0.1, 0.7071068, 0, 0, -0.7071068]
+    wingPose = [0.75, -0.3, 0.15, 0.5, 0.5, 0.5, 0.5]
 
     storageURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/storage.urdf"
-    storagePose = [-0.4, -0.2, -0.77, 0, 0, 0, 0]
+    storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
+
+    container1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
+    container1_1Pose = [ 0.4, -0.4, 0., 0., 0., 0., 0.]
+    container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
+    container1_3Pose = [ 0.55, -0.4, 0., 0., 0., 0., 0.]
+    container1_4Pose = [-0.55, -0.4, 0., 0., 0., 0., 0.]
     
+    container2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
+    container2_1Pose = [0.4, -0.1, 0, 0., 0., 0., 0.]
+    container2_2Pose = [-0.4, -0.1, 0., 0., 0., 0., 0.]
 
-    container2_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    container2_1Pose = [0.6, -0.1, 0, 0.7071068, 0, 0, 0.7071068]
-
-    container1_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_1Pose = [0.2975, -0.1, 0, 0, 0, 0, 0]
-    
-    container3_1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    container3_1Pose = [0.1275, -0.1, 0, 0, 0, 0, 0]
-    
-    #container1_2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_2Pose = [-0.0425, -0.1, 0, 0, 0, 0, 0]
-
-    container3_2Pose = [-0.2125, -0.1, 0, 0, 0, 0, 0]
-
-    container1_3Pose = [-0.3825, -0.1, 0, 0, 0, 0, 0]
-
-    container2_2Pose = [-0.5125, -0.1, 0, 0, 0, 0, 0]
-
-    container1_3Pose = [-0.6425, -0.1, 0, 0, 0, 0, 0]
-    
+    container3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
+    container3_1Pose = [0.6, -0.1, 0., 0., 0., 0., 0.]
+    container3_2Pose = [-0.6, -0.1, 0., 0., 0, 0, 0]
 
     world = ada.get_world()
 
-    #obj1 = world.add_body_from_urdf(obj1URDFUri, object1Pose)
-    #obj2 = world.add_body_from_urdf(obj2URDFUri, object2Pose)
-    #obj3 = world.add_body_from_urdf(obj3URDFUri, object3Pose)
-    #obj4 = world.add_body_from_urdf(obj4URDFUri, object4Pose)
     wing = world.add_body_from_urdf(wingURDFUri, wingPose)
     storageInWorld = world.add_body_from_urdf(storageURDFUri, storagePose)
-    container2_1 = world.add_body_from_urdf(container2_1URDFUri, container2_1Pose)
-    container1_1 = world.add_body_from_urdf(container1_1URDFUri, container1_1Pose)
-    container3_1 = world.add_body_from_urdf(container3_1URDFUri, container3_1Pose)
-    container1_2 = world.add_body_from_urdf(container1_1URDFUri, container1_2Pose)
-    container3_2 = world.add_body_from_urdf(container3_1URDFUri, container3_2Pose)
-    container1_3 = world.add_body_from_urdf(container1_1URDFUri, container1_3Pose)
-    container2_2 = world.add_body_from_urdf(container2_1URDFUri, container2_2Pose)
-    container1_3 = world.add_body_from_urdf(container1_1URDFUri, container1_3Pose)
-
-
+    container1_1 = world.add_body_from_urdf(container1URDFUri, container1_1Pose)
+    container1_2 = world.add_body_from_urdf(container1URDFUri, container1_2Pose)
+    container1_3 = world.add_body_from_urdf(container1URDFUri, container1_3Pose)
+    container1_4 = world.add_body_from_urdf(container1URDFUri, container1_4Pose)
+    container2_1 = world.add_body_from_urdf(container2URDFUri, container2_1Pose)
+    container2_2 = world.add_body_from_urdf(container2URDFUri, container2_2Pose)
+    container3_1 = world.add_body_from_urdf(container3URDFUri, container3_1Pose)
+    container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
 
     rospy.sleep(5.0)
 
@@ -163,12 +136,20 @@ if not rospy.is_shutdown():
     # ----------------------- Create TSR for grasping ----------------------- #
 
 
+    container1_1PoseMat = [[0.0, 0.0, 1.0, container1_1Pose[0]],
+                           [0.0, -1.0, 0.0, container1_1Pose[1]],
+                           [1.0, 0.0, 0.0, container1_1Pose[2]],
+                           [0.0, 0.0, 0.0, 1.0]]
+    container1_1TSR = createTSR(container1_1PoseMat, hand)
+    container1_1marker = viewer.add_tsr_marker(container1_1TSR)
+
+
     choosed_objectPose = wingPose
 
     objectPoseMat = [[1.0, 0.0, 0.0, choosed_objectPose[0]],
-                      [0.0, 1.0, 0.0, choosed_objectPose[1]],
-                      [0.0, 0.0, 1.0, choosed_objectPose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
+                     [0.0, 1.0, 0.0, choosed_objectPose[1]],
+                     [0.0, 0.0, 1.0, choosed_objectPose[2]],
+                     [0.0, 0.0, 0.0, 1.0]]
     objectTSR = createTSR(objectPoseMat,hand)
 
 
@@ -186,15 +167,6 @@ if not rospy.is_shutdown():
     marker2 = viewer.add_tsr_marker(object2TSR)
 
     choosed_object3Pose = container1_1Pose
-
-    object3PoseMat = [[0.0, 0.0, 1.0, choosed_object3Pose[0]],
-                      [0.0, 1.0, 0.0, choosed_object3Pose[1]],
-                      [-1.0, 0.0, 0.0, choosed_object3Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object3TSR = createTSR(object3PoseMat,hand)
-
-
-    marker3 = viewer.add_tsr_marker(object3TSR)
 
     choosed_object4Pose = container3_1Pose
 
