@@ -2,12 +2,22 @@
 
 import adapy
 import rospy
-import sys, time
+import sys
+import time
 import pickle
 import numpy as np
-from adarrt import AdaRRT
 
-# from moveit_ros_planning_interface._moveit_roscpp_initializer import roscpp_init
+sys.path.insert(0, 'D:/Research/Git/ada-pick-and-place-demos/src')
+from adarrt import AdaRRT
+from gui import *
+
+# set to False if operating real robot
+sim = True
+
+if not sim:
+    # import and initialize requirements for operating real robot
+    from moveit_ros_planning_interface._moveit_roscpp_initializer import roscpp_init
+    roscpp_init('airplane_assembly', [])
 
 
 def createBwMatrixforTSR():
@@ -32,11 +42,11 @@ def createBwMatrixforTSR():
     return Bw
 
 
-def createTSR(partPose, hand):
+def createTSR(partPose, adaHand):
     """
     Create the TSR for grasping a soda can.
-    :param soda_pose: SE(3) transform from world to soda can.
-    :param hand: ADA hand object
+    :param partPose: SE(3) transform from world to soda can.
+    :param adaHand: ADA hand object
     :returns: A fully initialized TSR.
     """
 
@@ -47,11 +57,8 @@ def createTSR(partPose, hand):
     # transform the TSR to desired grasping pose
     rot_trans = np.eye(4)
     rot_trans[0:3, 0:3] = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
-    partTSR_Tw_e = np.matmul(rot_trans, hand.get_endeffector_transform("cylinder"))
-    # partTSR_Tw_e[2:3] += 0.05
-    # partTSR_Tw_e[1:3] += 0.05
+    partTSR_Tw_e = np.matmul(rot_trans, adaHand.get_endeffector_transform("cylinder"))
     partTSR_Tw_e[0] += 0.05
-    
 
     # set the transformed TSR
     partTSR.set_Tw_e(partTSR_Tw_e)
@@ -60,27 +67,25 @@ def createTSR(partPose, hand):
 
     return partTSR
 
-def closeHand(hand, displacement):
-    hand.execute_preshape(displacement)
+
+def toggleHand(adaHand, displacement):
+    adaHand.execute_preshape(displacement)
 
 
-# ----------------------------------- MAIN ---------------------------------- #
+# ------------------------------------------------------- MAIN ------------------------------------------------------- #
 
+# initialise ros node
 rospy.init_node("adapy_assembly")
 rate = rospy.Rate(10)
 
-# roscpp_init('airplane_assembly', [])
-
 if not rospy.is_shutdown():
 
-    sim = True
-
+    # initialize robot
     ada = adapy.Ada(sim)
 
-    # -------------------------- Create sim world --------------------------- #
+    # ------------------------------------------ Create sim environment ---------------------------------------------- #
 
-    viewer = ada.start_viewer("dart_markers/simple_trajectories", "map")
-
+    # objects in airplane assembly
     wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
     wingPose = [0.75, -0.3, 0.15, 0.5, 0.5, 0.5, 0.5]
 
@@ -88,9 +93,9 @@ if not rospy.is_shutdown():
     storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
 
     container1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_1Pose = [ 0.4, -0.4, 0., 0., 0., 0., 0.]
+    container1_1Pose = [0.4, -0.4, 0., 0., 0., 0., 0.]
     container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
-    container1_3Pose = [ 0.55, -0.4, 0., 0., 0., 0., 0.]
+    container1_3Pose = [0.55, -0.4, 0., 0., 0., 0., 0.]
     container1_4Pose = [-0.55, -0.4, 0., 0., 0., 0., 0.]
     
     container2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
@@ -101,8 +106,11 @@ if not rospy.is_shutdown():
     container3_1Pose = [0.6, -0.1, 0., 0., 0., 0., 0.]
     container3_2Pose = [-0.6, -0.1, 0., 0., 0, 0, 0]
 
+    # initialize sim environment
     world = ada.get_world()
+    viewer = ada.start_viewer("dart_markers/simple_trajectories", "map")
 
+    # add parts to sim environment
     wing = world.add_body_from_urdf(wingURDFUri, wingPose)
     storageInWorld = world.add_body_from_urdf(storageURDFUri, storagePose)
     container1_1 = world.add_body_from_urdf(container1URDFUri, container1_1Pose)
@@ -114,9 +122,9 @@ if not rospy.is_shutdown():
     container3_1 = world.add_body_from_urdf(container3URDFUri, container3_1Pose)
     container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
 
-    rospy.sleep(5.0)
+    rospy.sleep(3.0)
 
-    # -------------------------- Get robot config --------------------------- #
+    # ------------------------------------------------ Get robot config ---------------------------------------------- #
 
     collision = ada.get_self_collision_constraint()
 
@@ -128,127 +136,42 @@ if not rospy.is_shutdown():
 
     viewer.add_frame(hand_node)
 
-    # --------- Start executor for real robot (not needed for sim) ---------- #
+    # ------------------------------- Start executor for real robot (not needed for sim) ----------------------------- #
 
     if not sim:
         ada.start_trajectory_executor()
 
-    # ----------------------- Create TSR for grasping ----------------------- #
+    # --------------------------------------------------- MAIN Loop -------------------------------------------------- #
 
+    objects = {"main wing": wingPose,
+               "long bolts": container1_1Pose,
+               "short bolts": container1_2Pose,
+               "propeller nut": container1_3Pose,
+               "tail bolt": container1_4Pose,
+               "propellers": container2_1Pose,
+               "tool": container2_2Pose,
+               "propeller hub": container3_1Pose}
 
-    #container1_1PoseMat = [[0.0, 0.0, 1.0, container1_1Pose[0]],
-    #                       [0.0, -1.0, 0.0, container1_1Pose[1]],
-    #                       [1.0, 0.0, 0.0, container1_1Pose[2]],
-    #                       [0.0, 0.0, 0.0, 1.0]]
-    #container1_1TSR = createTSR(container1_1PoseMat, hand)
-    #container1_1marker = viewer.add_tsr_marker(container1_1TSR)
+    # initialize gui
+    app = QApplication(sys.argv)
+    win = UserInterface()
 
+    # loop over all objects
+    remaining_objects = objects.dict()
+    win.set_options(remaining_objects)
 
-    choosed_objectPose = wingPose
+    obj = objects[win.user_choice[5:]]
+    objPoseMat = [[1.0, 0.0, 0.0, obj[0]],
+                  [0.0, 1.0, 0.0, obj[1]],
+                  [0.0, 0.0, 1.0, obj[2]],
+                  [0.0, 0.0, 0.0, 1.0]]
+    objTSR = createTSR(objPoseMat, hand)
+    marker = viewer.add_tsr_marker(objTSR)
 
-    objectPoseMat = [[1.0, 0.0, 0.0, choosed_objectPose[0]],
-                     [0.0, 1.0, 0.0, choosed_objectPose[1]],
-                     [0.0, 0.0, 1.0, choosed_objectPose[2]],
-                     [0.0, 0.0, 0.0, 1.0]]
-    objectTSR = createTSR(objectPoseMat,hand)
+    win.show()
+    sys.exit(app.exec_())
 
-
-    marker = viewer.add_tsr_marker(objectTSR)
-
-    choosed_object2Pose = container2_1Pose
-
-    object2PoseMat = [[0.0, 0.0, 1.0, choosed_object2Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object2Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object2Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object2TSR = createTSR(object2PoseMat,hand)
-
-
-    marker2 = viewer.add_tsr_marker(object2TSR)
-
-    choosed_object3Pose = container1_1Pose
-    object3PoseMat = [[0.0, 0.0, 1.0, choosed_object3Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object3Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object3Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object3TSR = createTSR(object3PoseMat,hand)
-    marker3 = viewer.add_tsr_marker(object3TSR)
-
-    choosed_object4Pose = container3_1Pose
-
-    object4PoseMat = [[0.0, 0.0, 1.0, choosed_object4Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object4Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object4Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object4TSR = createTSR(object4PoseMat,hand)
-
-
-    marker4 = viewer.add_tsr_marker(object4TSR)
-
-    choosed_object5Pose = container1_2Pose
-
-    object5PoseMat = [[0.0, 0.0, 1.0, choosed_object5Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object5Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object5Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object5TSR = createTSR(object5PoseMat,hand)
-
-
-    marker5 = viewer.add_tsr_marker(object5TSR)
-
-    choosed_object6Pose = container3_2Pose
-
-    object6PoseMat = [[0.0, 0.0, 1.0, choosed_object6Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object6Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object6Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object6TSR = createTSR(object6PoseMat,hand)
-
-
-    marker6 = viewer.add_tsr_marker(object6TSR)
-
-    choosed_object7Pose = container1_3Pose
-
-    object7PoseMat = [[0.0, 0.0, 1.0, choosed_object7Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object7Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object7Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object7TSR = createTSR(object7PoseMat,hand)
-
-
-    marker7 = viewer.add_tsr_marker(object7TSR)
-
-    choosed_object8Pose = container2_2Pose
-
-    object8PoseMat = [[0.0, 0.0, 1.0, choosed_object8Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object8Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object8Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object8TSR = createTSR(object8PoseMat,hand)
-
-
-    marker8 = viewer.add_tsr_marker(object8TSR)
-
-    choosed_object9Pose = container1_3Pose
-
-    object9PoseMat = [[0.0, 0.0, 1.0, choosed_object9Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object9Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object9Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object9TSR = createTSR(object9PoseMat,hand)
-
-
-    marker9 = viewer.add_tsr_marker(object9TSR)
-
-    choosed_object10Pose = container1_4Pose
-    object10PoseMat = [[0.0, 0.0, 1.0, choosed_object10Pose[0]],
-                      [0.0, -1.0, 0.0, choosed_object10Pose[1]],
-                      [1.0, 0.0, 0.0, choosed_object10Pose[2]],
-                      [0.0, 0.0, 0.0, 1.0]]
-    object10TSR = createTSR(object10PoseMat,hand)
-    marker10 = viewer.add_tsr_marker(object10TSR)
-
-    # ------------------ Collision detection ----------------- #
+    # --------------------------------------------- Collision detection ---------------------------------------------- #
 
     collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
                                                                            [container1_4])
@@ -259,8 +182,8 @@ if not rospy.is_shutdown():
 
     # ------------------ Move robot to start configuration ----------------- #
 
-    #target waypoint: [-2.77053788,  4.20495852,  1.98182475, -3.38792973,  0.04354109, 0.33316412]
-    #armHome = [-1.5094078 ,  2.92774907,  1.08108148, -1.30679823,  1.72727102, 2.50344173]
+    # target waypoint: [-2.77053788,  4.20495852,  1.98182475, -3.38792973,  0.04354109, 0.33316412]
+    # armHome = [-1.5094078 ,  2.92774907,  1.08108148, -1.30679823,  1.72727102, 2.50344173]
 
     armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
     waypoints = [(0.0, positions), (1.0, armHome)]
@@ -279,7 +202,7 @@ if not rospy.is_shutdown():
     
     raw_input("Press Enter to move robot to home location...")
     ada.execute_trajectory(trajectory)
-    closeHand(hand, [0.5, 0.5])
+    toggleHand(hand, [0.5, 0.5])
     time.sleep(3)
 
     # ------------------------ Setup IK for grasping ------------------------ #
@@ -329,45 +252,15 @@ if not rospy.is_shutdown():
         if not trajectory:
             print("Failed to find a solution!")
         else:
-            print("Found a trajectory! Executing...")
-
             raw_input("Press enter to execute trajectory...")
-
             ada.execute_trajectory(trajectory)
-
-            closeHand(hand, [1.5, 1.5])
-
+            toggleHand(hand, [1.5, 1.5])
             time.sleep(4)
+            hand.grab(obj)
 
-            hand.grab(container1_4)
+            # ------------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------- #
 
-
-            # next step transfer Jacobian pseudo-inverse for forward motion
-            '''
-            step_size = 0.01
-            num_steps = 4
-            for ii in range(0, num_steps):
-                jac = arm_skeleton.get_linear_jacobian(hand_node)
-                full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
-                delta_x = np.array([0, 0, 0, 0, 0, -step_size])
-                delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
-                q = arm_skeleton.get_positions()
-                next_q = q + delta_q
-                if sim:
-                    ada.set_positions(next_q)
-                    viewer.update()
-                else:
-                    print "next_q", next_q
-                    waypoints = [(0.0, q), (1.0, next_q)]
-                    trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-                    # ada.start_trajectory_executor()
-                    ada.execute_trajectory(trajectory)
-                    # time.sleep(0.01)
-			'''
-
-            # ------------------- Lift up grasped object -------------------- #
-
-            #lift up
+            # lift up
             jac = arm_skeleton.get_linear_jacobian(hand_node)
             full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
             delta_x = np.array([0, 0, 0, 0, 0, -0.3])
@@ -375,13 +268,12 @@ if not rospy.is_shutdown():
             q = arm_skeleton.get_positions()
             upWaypt = q + delta_q
 
-
-            waypoints = [(0.0,configurations[0]),(1.0,upWaypt)]
+            waypoints = [(0.0, configurations[0]), (1.0, upWaypt)]
             traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
             ada.execute_trajectory(traj)
             time.sleep(3)
 
-            hand.ungrab(container1_4)
+            hand.ungrab(obj)
 
             # --------------- Move grasped object to workbench -------------- #\
 
@@ -399,7 +291,7 @@ if not rospy.is_shutdown():
 
             # ------------------- Move robot back to home ------------------- #
 
-            waypoints = [(0.0,configurations[0]),(1.0,armHome)]
+            waypoints = [(0.0, configurations[0]), (1.0, armHome)]
             traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
             ada.execute_trajectory(traj)
             time.sleep(2)
@@ -410,3 +302,101 @@ if not rospy.is_shutdown():
 
 
 raw_input("Press Enter to Quit...")
+
+# # -------------------------------------------- Create TSR for grasping ------------------------------------------- #
+#
+# choosed_objectPose = wingPose
+#
+# objectPoseMat = [[1.0, 0.0, 0.0, choosed_objectPose[0]],
+#                  [0.0, 1.0, 0.0, choosed_objectPose[1]],
+#                  [0.0, 0.0, 1.0, choosed_objectPose[2]],
+#                  [0.0, 0.0, 0.0, 1.0]]
+# objectTSR = createTSR(objectPoseMat, hand)
+#
+# marker = viewer.add_tsr_marker(objectTSR)
+#
+# choosed_object2Pose = container2_1Pose
+#
+# object2PoseMat = [[0.0, 0.0, 1.0, choosed_object2Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object2Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object2Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object2TSR = createTSR(object2PoseMat, hand)
+#
+# marker2 = viewer.add_tsr_marker(object2TSR)
+#
+# choosed_object3Pose = container1_1Pose
+# object3PoseMat = [[0.0, 0.0, 1.0, choosed_object3Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object3Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object3Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object3TSR = createTSR(object3PoseMat, hand)
+# marker3 = viewer.add_tsr_marker(object3TSR)
+#
+# choosed_object4Pose = container3_1Pose
+#
+# object4PoseMat = [[0.0, 0.0, 1.0, choosed_object4Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object4Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object4Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object4TSR = createTSR(object4PoseMat, hand)
+#
+# marker4 = viewer.add_tsr_marker(object4TSR)
+#
+# choosed_object5Pose = container1_2Pose
+#
+# object5PoseMat = [[0.0, 0.0, 1.0, choosed_object5Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object5Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object5Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object5TSR = createTSR(object5PoseMat, hand)
+#
+# marker5 = viewer.add_tsr_marker(object5TSR)
+#
+# choosed_object6Pose = container3_2Pose
+#
+# object6PoseMat = [[0.0, 0.0, 1.0, choosed_object6Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object6Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object6Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object6TSR = createTSR(object6PoseMat, hand)
+#
+# marker6 = viewer.add_tsr_marker(object6TSR)
+#
+# choosed_object7Pose = container1_3Pose
+#
+# object7PoseMat = [[0.0, 0.0, 1.0, choosed_object7Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object7Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object7Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object7TSR = createTSR(object7PoseMat, hand)
+#
+# marker7 = viewer.add_tsr_marker(object7TSR)
+#
+# choosed_object8Pose = container2_2Pose
+#
+# object8PoseMat = [[0.0, 0.0, 1.0, choosed_object8Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object8Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object8Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object8TSR = createTSR(object8PoseMat, hand)
+#
+# marker8 = viewer.add_tsr_marker(object8TSR)
+#
+# choosed_object9Pose = container1_3Pose
+#
+# object9PoseMat = [[0.0, 0.0, 1.0, choosed_object9Pose[0]],
+#                   [0.0, -1.0, 0.0, choosed_object9Pose[1]],
+#                   [1.0, 0.0, 0.0, choosed_object9Pose[2]],
+#                   [0.0, 0.0, 0.0, 1.0]]
+# object9TSR = createTSR(object9PoseMat, hand)
+#
+# marker9 = viewer.add_tsr_marker(object9TSR)
+#
+# choosed_object10Pose = container1_4Pose
+# object10PoseMat = [[0.0, 0.0, 1.0, choosed_object10Pose[0]],
+#                    [0.0, -1.0, 0.0, choosed_object10Pose[1]],
+#                    [1.0, 0.0, 0.0, choosed_object10Pose[2]],
+#                    [0.0, 0.0, 0.0, 1.0]]
+# object10TSR = createTSR(object10PoseMat, hand)
+# marker10 = viewer.add_tsr_marker(object10TSR)
