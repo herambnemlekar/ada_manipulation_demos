@@ -9,7 +9,7 @@ class UserInterface(QMainWindow):
 
         # window title and size
         self.setWindowTitle("Robot Commander")
-        self.setGeometry(250, 250, 500, 500)
+        self.setGeometry(250, 250, 500, 550)
 
         # prompt
         self.query = QLabel(self)
@@ -34,11 +34,19 @@ class UserInterface(QMainWindow):
             self.options[-1].clicked.connect(self.set_choice)
             option_y += 50
 
+
+    def get_choice(self):
+        while not self.user_choice:
+            self.show()
+            sys.exit()
+
     def set_choice(self):
         for option in self.options:
             if option.isChecked():
                 self.user_choice = option.text()
+                option.toggle()
 
+        self.close()
 
 
 # def main():

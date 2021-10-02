@@ -6,8 +6,6 @@ import sys
 import time
 import pickle
 import numpy as np
-
-sys.path.insert(0, 'D:/Research/Git/ada-pick-and-place-demos/src')
 from adarrt import AdaRRT
 from gui import *
 
@@ -56,9 +54,9 @@ def createTSR(partPose, adaHand):
 
     # transform the TSR to desired grasping pose
     rot_trans = np.eye(4)
-    rot_trans[0:3, 0:3] = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+    rot_trans[0:3, 0:3] = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
     partTSR_Tw_e = np.matmul(rot_trans, adaHand.get_endeffector_transform("cylinder"))
-    partTSR_Tw_e[0] += 0.05
+    partTSR_Tw_e[2] += 0.05
 
     # set the transformed TSR
     partTSR.set_Tw_e(partTSR_Tw_e)
@@ -139,7 +137,16 @@ if not rospy.is_shutdown():
     # ------------------------------- Start executor for real robot (not needed for sim) ----------------------------- #
 
     if not sim:
-        ada.start_trajectory_executor()
+        ada.start_trajectory_executor() 
+
+    armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
+    waypoints = [(0.0, positions), (1.0, armHome)]
+    trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
+
+    raw_input("Press Enter to move robot to home location...")
+    ada.execute_trajectory(trajectory)
+    toggleHand(hand, [0.5, 0.5])
+    time.sleep(3)
 
     # --------------------------------------------------- MAIN Loop -------------------------------------------------- #
 
@@ -157,21 +164,24 @@ if not rospy.is_shutdown():
     win = UserInterface()
 
     # loop over all objects
-    remaining_objects = objects.dict()
+    remaining_objects = objects.keys()
     win.set_options(remaining_objects)
+    
+    while not win.user_choice:
+        win.show()
+        app.exec_()
 
-    obj = objects[win.user_choice[5:]]
-    objPoseMat = [[1.0, 0.0, 0.0, obj[0]],
-                  [0.0, 1.0, 0.0, obj[1]],
-                  [0.0, 0.0, 1.0, obj[2]],
+    print("Robot will fetch:", win.user_choice)
+
+    objPose = objects[win.user_choice]
+    objPoseMat = [[1.0, 0.0, 0.0, objPose[0]],
+                  [0.0, 1.0, 0.0, objPose[1]],
+                  [0.0, 0.0, 1.0, objPose[2]],
                   [0.0, 0.0, 0.0, 1.0]]
     objTSR = createTSR(objPoseMat, hand)
     marker = viewer.add_tsr_marker(objTSR)
 
-    win.show()
-    sys.exit(app.exec_())
-
-    # --------------------------------------------- Collision detection ---------------------------------------------- #
+    # -------------------------------------------- Collision detection ----------------------------------------------- #
 
     collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
                                                                            [container1_4])
@@ -180,34 +190,10 @@ if not rospy.is_shutdown():
                                                                          collision_free_constraint)
     collision = ada.get_self_collision_constraint()
 
-    # ------------------ Move robot to start configuration ----------------- #
 
-    # target waypoint: [-2.77053788,  4.20495852,  1.98182475, -3.38792973,  0.04354109, 0.33316412]
-    # armHome = [-1.5094078 ,  2.92774907,  1.08108148, -1.30679823,  1.72727102, 2.50344173]
-
-    armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
-    waypoints = [(0.0, positions), (1.0, armHome)]
-    trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
-
-    # trajectory = None
-    # adaRRT = AdaRRT(start_state=np.array(positions), goal_state=np.array(armHome), step_size=0.1,
-    #                         goal_precision=0.2, ada=ada, objects=[storageInWorld])
-    # path = adaRRT.build()
-    # trajectory = None
-    # if path is not None:
-    #     waypoints = []
-    #     for i, waypoint in enumerate(path):
-    #         waypoints.append((0.0 + i, waypoint))
-    #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
+    # ------------------------------------------- Setup IK for grasping ---------------------------------------------- #
     
-    raw_input("Press Enter to move robot to home location...")
-    ada.execute_trajectory(trajectory)
-    toggleHand(hand, [0.5, 0.5])
-    time.sleep(3)
-
-    # ------------------------ Setup IK for grasping ------------------------ #
-    
-    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, object10TSR, hand_node)
+    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, objTSR, hand_node)
     ik_generator = ik_sampleable.create_sample_generator()
     configurations = []
     samples = 0
@@ -220,7 +206,7 @@ if not rospy.is_shutdown():
             continue
         configurations.append(goal_state)   
 
-    # ------------------------ Plan path for grasping ----------------------- #
+    # ------------------------------------------- Plan path for grasping -------------------------------------------- #
     
     if len(configurations) == 0:
         print("No valid configurations found!")
@@ -247,7 +233,7 @@ if not rospy.is_shutdown():
         # pickle.dump(trajectory,tFile)
         # tFile.close()
 
-        # ------------------ Execute path to grasp object ------------------- #
+        # ------------------------------------------ Execute path to grasp object --------------------------------- #
 
         if not trajectory:
             print("Failed to find a solution!")
@@ -256,9 +242,9 @@ if not rospy.is_shutdown():
             ada.execute_trajectory(trajectory)
             toggleHand(hand, [1.5, 1.5])
             time.sleep(4)
-            hand.grab(obj)
+            hand.grab(container2_1)
 
-            # ------------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------- #
+            # ----------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------ #
 
             # lift up
             jac = arm_skeleton.get_linear_jacobian(hand_node)
@@ -273,9 +259,9 @@ if not rospy.is_shutdown():
             ada.execute_trajectory(traj)
             time.sleep(3)
 
-            hand.ungrab(obj)
+            hand.ungrab(container2_1)
 
-            # --------------- Move grasped object to workbench -------------- #\
+            # --------------- Move grasped object to workbench -------------- #
 
             # Set target TSR for workbench
             # Find configuration for target TSR using inverse kinematics
