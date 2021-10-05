@@ -25,20 +25,17 @@ class UserInterface(QMainWindow):
     def set_options(self, options):
         option_x = 125
         option_y = 100
+        buttons = []
         for opt in options:
-            self.options.append(QPushButton(self))
-            self.options[-1].setText(opt)
-            self.options[-1].setFont(QFont('Arial', 12))
-            self.options[-1].setGeometry(option_x, option_y, 225, 50)
-            self.options[-1].setCheckable(True)
-            self.options[-1].clicked.connect(self.set_choice)
+            buttons.append(QPushButton(self))
+            buttons[-1].setText(opt)
+            buttons[-1].setFont(QFont('Arial', 12))
+            buttons[-1].setGeometry(option_x, option_y, 225, 50)
+            buttons[-1].setCheckable(True)
+            buttons[-1].clicked.connect(self.set_choice)
             option_y += 50
 
-
-    def get_choice(self):
-        while not self.user_choice:
-            self.show()
-            sys.exit()
+        self.options = buttons
 
     def set_choice(self):
         for option in self.options:

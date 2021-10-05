@@ -142,145 +142,159 @@ if not rospy.is_shutdown():
     armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
     waypoints = [(0.0, positions), (1.0, armHome)]
     trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
-
-    raw_input("Press Enter to move robot to home location...")
     ada.execute_trajectory(trajectory)
     toggleHand(hand, [0.5, 0.5])
     time.sleep(3)
 
     # --------------------------------------------------- MAIN Loop -------------------------------------------------- #
 
-    objects = {"main wing": wingPose,
-               "long bolts": container1_1Pose,
-               "short bolts": container1_2Pose,
-               "propeller nut": container1_3Pose,
-               "tail bolt": container1_4Pose,
-               "propellers": container2_1Pose,
-               "tool": container2_2Pose,
-               "propeller hub": container3_1Pose}
+    objects = {"main wing": [wing, wingPose],
+               "long bolts": [container1_1, container1_1Pose],
+               "short bolts": [container1_2, container1_2Pose],
+               "propeller nut": [container1_3, container1_3Pose],
+               "tail bolt": [container1_4, container1_4Pose],
+               "propellers": [container2_1, container2_1Pose],
+               "tool": [container2_2, container2_2Pose],
+               "propeller hub": [container3_1, container3_1Pose]}
 
     # initialize gui
     app = QApplication(sys.argv)
-    win = UserInterface()
 
     # loop over all objects
     remaining_objects = objects.keys()
-    win.set_options(remaining_objects)
+    while remaining_objects:
+        win = UserInterface()
+        win.set_options(remaining_objects)
     
-    while not win.user_choice:
-        win.show()
-        app.exec_()
+        while not win.user_choice:
+            win.show()
+            app.exec_()
 
-    print("Robot will fetch:", win.user_choice)
+        print("Robot will fetch:", win.user_choice)
 
-    objPose = objects[win.user_choice]
-    objPoseMat = [[1.0, 0.0, 0.0, objPose[0]],
-                  [0.0, 1.0, 0.0, objPose[1]],
-                  [0.0, 0.0, 1.0, objPose[2]],
-                  [0.0, 0.0, 0.0, 1.0]]
-    objTSR = createTSR(objPoseMat, hand)
-    marker = viewer.add_tsr_marker(objTSR)
+        obj = objects[win.user_choice][0]
+        objPose = objects[win.user_choice][1]
+        objPoseMat = [[1.0, 0.0, 0.0, objPose[0]],
+                      [0.0, 1.0, 0.0, objPose[1]],
+                      [0.0, 0.0, 1.0, objPose[2]],
+                      [0.0, 0.0, 0.0, 1.0]]
+        objTSR = createTSR(objPoseMat, hand)
+        # marker = viewer.add_tsr_marker(objTSR)
 
-    # -------------------------------------------- Collision detection ----------------------------------------------- #
+        # -------------------------------------------- Collision detection ----------------------------------------------- #
 
-    collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
-                                                                           [container1_4])
-    full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
-                                                                         ada.get_arm_skeleton(),
-                                                                         collision_free_constraint)
-    collision = ada.get_self_collision_constraint()
+        # collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
+        #                                                                        [obj])
+        # full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
+        #                                                                      ada.get_arm_skeleton(),
+        #                                                                      collision_free_constraint)
+        # collision = ada.get_self_collision_constraint()
 
 
-    # ------------------------------------------- Setup IK for grasping ---------------------------------------------- #
-    
-    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, objTSR, hand_node)
-    ik_generator = ik_sampleable.create_sample_generator()
-    configurations = []
-    samples = 0
-    maxSamples = 10
-    print("Finding IK configuration...")
-    while samples < maxSamples and ik_generator.can_sample():
-        goal_state = ik_generator.sample(arm_state_space)
-        samples += 1
-        if len(goal_state) == 0:
-            continue
-        configurations.append(goal_state)   
+        # ------------------------------------------- Setup IK for grasping ---------------------------------------------- #
+        
+        ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, objTSR, hand_node)
+        ik_generator = ik_sampleable.create_sample_generator()
+        configurations = []
+        samples = 0
+        maxSamples = 10
+        print("Finding IK configuration...")
+        while samples < maxSamples and ik_generator.can_sample():
+            goal_state = ik_generator.sample(arm_state_space)
+            samples += 1
+            if len(goal_state) == 0:
+                continue
+            configurations.append(goal_state)   
 
-    # ------------------------------------------- Plan path for grasping -------------------------------------------- #
-    
-    if len(configurations) == 0:
-        print("No valid configurations found!")
-    else:
-        print("IK Configuration found!")
-
-        collision = ada.get_self_collision_constraint()
-
-        # trajectory = None
-        # adaRRT = AdaRRT(start_state=np.array(armHome), goal_state=np.array(configuration[0]), step_size=0.05,
-        #                         goal_precision=0.1, ada=ada, objects=[storageInWorld])
-        # path = adaRRT.build()
-        # trajectory = None
-        # if path is not None:
-        #     waypoints = []
-        #     for i, waypoint in enumerate(path):
-        #         waypoints.append((0.0 + i, waypoint))
-        #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
-       
-        waypoints = [(0.0,armHome),(1.0,configurations[0])]
-        trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-
-        # tFile = open("trojectCSV/1.txt","w")
-        # pickle.dump(trajectory,tFile)
-        # tFile.close()
-
-        # ------------------------------------------ Execute path to grasp object --------------------------------- #
-
-        if not trajectory:
-            print("Failed to find a solution!")
+        # ------------------------------------------- Plan path for grasping -------------------------------------------- #
+        
+        if len(configurations) == 0:
+            print("No valid configurations found!")
         else:
-            raw_input("Press enter to execute trajectory...")
-            ada.execute_trajectory(trajectory)
-            toggleHand(hand, [1.5, 1.5])
-            time.sleep(4)
-            hand.grab(container2_1)
+            print("IK Configuration found!")
 
-            # ----------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------ #
+            collision = ada.get_self_collision_constraint()
 
-            # lift up
-            jac = arm_skeleton.get_linear_jacobian(hand_node)
-            full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
-            delta_x = np.array([0, 0, 0, 0, 0, -0.3])
-            delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
-            q = arm_skeleton.get_positions()
-            upWaypt = q + delta_q
+            # trajectory = None
+            # adaRRT = AdaRRT(start_state=np.array(armHome), goal_state=np.array(configuration[0]), step_size=0.05,
+            #                         goal_precision=0.1, ada=ada, objects=[storageInWorld])
+            # path = adaRRT.build()
+            # trajectory = None
+            # if path is not None:
+            #     waypoints = []
+            #     for i, waypoint in enumerate(path):
+            #         waypoints.append((0.0 + i, waypoint))
+            #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
+           
+            waypoints = [(0.0,armHome),(1.0,configurations[0])]
+            trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
 
-            waypoints = [(0.0, configurations[0]), (1.0, upWaypt)]
-            traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            ada.execute_trajectory(traj)
-            time.sleep(3)
+            # tFile = open("trojectCSV/1.txt","w")
+            # pickle.dump(trajectory,tFile)
+            # tFile.close()
 
-            hand.ungrab(container2_1)
+            # ------------------------------------------ Execute path to grasp object --------------------------------- #
 
-            # --------------- Move grasped object to workbench -------------- #
+            if not trajectory:
+                print("Failed to find a solution!")
+            else:
+                ada.execute_trajectory(trajectory)
+                toggleHand(hand, [1.5, 1.5])
+                time.sleep(3)
+                hand.grab(obj)
 
-            # Set target TSR for workbench
-            # Find configuration for target TSR using inverse kinematics
-            # Plan to target configuration using adarrt
-            # execute trajectory to move container to target TSR on the workbench
+                # ----------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------ #
 
-            # targetWaypt = [-3.41037512,  2.48071804,  4.96467289, -3.48166341,  0.68219961, -2.10886992]
-            # waypoints = [(0.0,upWaypt),(1.0,targetWaypt)]
-            # traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            # ada.execute_trajectory(traj)
-            # time.sleep(3)
-            # closeHand(hand, [0.3, 0.3])
+                # lift up
+                waypoints = []
+                for i in range(5):
+                    jac = arm_skeleton.get_linear_jacobian(hand_node)
+                    full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
+                    delta_x = np.array([0, 0, 0, 0, 0, -0.05])
+                    delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
+                    q = arm_skeleton.get_positions()
+                    upWaypt = q + delta_q
+                    waypoints.append((i, upWaypt))
+                    ada.set_positions(upWaypt)
 
-            # ------------------- Move robot back to home ------------------- #
+                # print("Here.", waypoints)
+                traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+                ada.execute_trajectory(traj)
+                time.sleep(3)
 
-            waypoints = [(0.0, configurations[0]), (1.0, armHome)]
-            traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-            ada.execute_trajectory(traj)
-            time.sleep(2)
+                # --------------- Move grasped object to workbench -------------- #
+
+                # move forward
+                waypoints = []
+                for i in range(5):
+                    jac = arm_skeleton.get_linear_jacobian(hand_node)
+                    full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
+                    delta_x = np.array([0, 0, 0, 0, -0.05, 0])
+                    delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
+                    q = arm_skeleton.get_positions()
+                    forWaypt = q + delta_q
+                    waypoints.append((i, forWaypt))
+                    ada.set_positions(forWaypt)
+
+                traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+                ada.execute_trajectory(traj)
+                time.sleep(3)
+
+                hand.ungrab(obj)
+                toggleHand(hand, [0.15, 0.15])
+                world.remove_skeleton(obj)
+                time.sleep(1)
+
+                # ------------------- Move robot back to home ------------------- #
+
+                waypoints = [(0.0, arm_skeleton.get_positions()), (1.0, armHome)]
+                traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+                ada.execute_trajectory(traj)
+                time.sleep(2)
+
+        print("Finished executing action.")
+        remaining_objects.remove(win.user_choice)
+        win.user_choice = None
 
     # --------- Stop executor for real robot (not needed for sim) ----------- #
     if not sim:
@@ -308,81 +322,3 @@ raw_input("Press Enter to Quit...")
 #                   [1.0, 0.0, 0.0, choosed_object2Pose[2]],
 #                   [0.0, 0.0, 0.0, 1.0]]
 # object2TSR = createTSR(object2PoseMat, hand)
-#
-# marker2 = viewer.add_tsr_marker(object2TSR)
-#
-# choosed_object3Pose = container1_1Pose
-# object3PoseMat = [[0.0, 0.0, 1.0, choosed_object3Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object3Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object3Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object3TSR = createTSR(object3PoseMat, hand)
-# marker3 = viewer.add_tsr_marker(object3TSR)
-#
-# choosed_object4Pose = container3_1Pose
-#
-# object4PoseMat = [[0.0, 0.0, 1.0, choosed_object4Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object4Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object4Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object4TSR = createTSR(object4PoseMat, hand)
-#
-# marker4 = viewer.add_tsr_marker(object4TSR)
-#
-# choosed_object5Pose = container1_2Pose
-#
-# object5PoseMat = [[0.0, 0.0, 1.0, choosed_object5Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object5Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object5Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object5TSR = createTSR(object5PoseMat, hand)
-#
-# marker5 = viewer.add_tsr_marker(object5TSR)
-#
-# choosed_object6Pose = container3_2Pose
-#
-# object6PoseMat = [[0.0, 0.0, 1.0, choosed_object6Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object6Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object6Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object6TSR = createTSR(object6PoseMat, hand)
-#
-# marker6 = viewer.add_tsr_marker(object6TSR)
-#
-# choosed_object7Pose = container1_3Pose
-#
-# object7PoseMat = [[0.0, 0.0, 1.0, choosed_object7Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object7Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object7Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object7TSR = createTSR(object7PoseMat, hand)
-#
-# marker7 = viewer.add_tsr_marker(object7TSR)
-#
-# choosed_object8Pose = container2_2Pose
-#
-# object8PoseMat = [[0.0, 0.0, 1.0, choosed_object8Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object8Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object8Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object8TSR = createTSR(object8PoseMat, hand)
-#
-# marker8 = viewer.add_tsr_marker(object8TSR)
-#
-# choosed_object9Pose = container1_3Pose
-#
-# object9PoseMat = [[0.0, 0.0, 1.0, choosed_object9Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object9Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object9Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object9TSR = createTSR(object9PoseMat, hand)
-#
-# marker9 = viewer.add_tsr_marker(object9TSR)
-#
-# choosed_object10Pose = container1_4Pose
-# object10PoseMat = [[0.0, 0.0, 1.0, choosed_object10Pose[0]],
-#                    [0.0, -1.0, 0.0, choosed_object10Pose[1]],
-#                    [1.0, 0.0, 0.0, choosed_object10Pose[2]],
-#                    [0.0, 0.0, 0.0, 1.0]]
-# object10TSR = createTSR(object10PoseMat, hand)
-# marker10 = viewer.add_tsr_marker(object10TSR)
