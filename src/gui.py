@@ -22,7 +22,7 @@ class UserInterface(QMainWindow):
         self.options = []
         self.user_choice = None
 
-    def set_options(self, options):
+    def set_options(self, options, suggestions=[]):
         option_x = 125
         option_y = 100
         buttons = []
@@ -33,6 +33,8 @@ class UserInterface(QMainWindow):
             buttons[-1].setGeometry(option_x, option_y, 225, 50)
             buttons[-1].setCheckable(True)
             buttons[-1].clicked.connect(self.set_choice)
+            if opt in suggestions:
+                button.setStyleSheet("background-color : yellow")
             option_y += 50
 
         self.options = buttons
