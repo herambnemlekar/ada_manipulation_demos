@@ -18,6 +18,13 @@ class UserInterface(QMainWindow):
         self.query.adjustSize()
         self.query.move(120, 50)
 
+        # task info
+        self.image = QLabel(self)
+        pixmap = QPixmap('task.jpg')
+        self.image.setPixmap(pixmap)
+        self.image.adjustSize()
+        self.image.move(450, 50)
+
         # inputs
         self.options = []
         self.user_choice = []
