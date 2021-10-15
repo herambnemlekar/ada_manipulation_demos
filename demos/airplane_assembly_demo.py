@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import pdb
 import adapy
 import rospy
 import sys
@@ -26,7 +27,7 @@ def createBwMatrixforTSR():
     """
     Bw = np.zeros([6, 2])
     Bw[0, 0] = -0.005
-    Bw[0, 1] = -0.005
+    Bw[0, 1] = 0.005
     Bw[1, 0] = -0.005
     Bw[1, 1] = 0.005
     Bw[2, 0] = -0.005
@@ -44,9 +45,9 @@ def createBwMatrixforTSR():
 def createTSR(partPose, adaHand):
     """
     Create the TSR for grasping a soda can.
-    :param partPose: SE(3) transform from world to soda can.
+    :param partPose: SE(3) transform from world to part.
     :param adaHand: ADA hand object
-    :returns: A fully initialized TSR.
+    :returns: A fully initialized TSR.  
     """
 
     # set the part TSR at the part pose
@@ -54,10 +55,8 @@ def createTSR(partPose, adaHand):
     partTSR.set_T0_w(partPose)
 
     # transform the TSR to desired grasping pose
-    rot_trans = np.eye(4)
-    rot_trans[0:3, 0:3] = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
-    partTSR_Tw_e = np.matmul(rot_trans, adaHand.get_endeffector_transform("cylinder"))
-    partTSR_Tw_e[2] += 0.0
+    partTSR_Tw_e = adaHand.get_endeffector_transform("cylinder")
+    partTSR_Tw_e[2] += 0.06
 
     # set the transformed TSR
     partTSR.set_Tw_e(partTSR_Tw_e)
@@ -115,32 +114,62 @@ if not rospy.is_shutdown():
     # ------------------------------------------ Create sim environment ---------------------------------------------- #
 
     # objects in airplane assembly
-    wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
-    wingPose = [0.75, -0.3, 0.15, 0.5, 0.5, 0.5, 0.5]
-
     storageURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/storage.urdf"
     storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
+
+    wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
+    wingPose = [0.75, -0.3, 0., 0.5, 0.5, 0.5, 0.5]
+
+    tailURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_tail_wing.urdf"
+    tailPose = [-0.7, -0.25, 0.088, 0.5, 0.5, 0.5, 0.5]
+    tailGraspPose = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1]]
+    tailGraspOffset = [0., 0.175, 0.]
 
     container1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
     container1_1Pose = [0.4, -0.4, 0., 0., 0., 0., 0.]
     container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
-    container1_3Pose = [0.55, -0.4, 0., 0., 0., 0., 0.]
-    container1_4Pose = [-0.55, -0.4, 0., 0., 0., 0., 0.]
-    
+    container1_3Pose = [0.55, -0.3, 0., 0., 0., 0., 0.]
+    container1_4Pose = [-0.55, -0.3, 0., 0., 0., 0., 0.]
+    container1GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
+    container1GraspOffset = [0., -0.065, -0.005]
+
     container2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
     container2_1Pose = [0.4, -0.1, 0, 0., 0., 0., 0.]
     container2_2Pose = [-0.4, -0.1, 0., 0., 0., 0., 0.]
-
+    container2GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
+    container2GraspOffset = [0., -0.115, 0.]
+    
     container3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    container3_1Pose = [0.6, -0.1, 0., 0., 0., 0., 0.]
-    container3_2Pose = [-0.6, -0.1, 0., 0., 0, 0, 0]
+    container3_1Pose = [0.6, 0., 0., 0., 0., 0., 0.]
+    container3_2Pose = [-0.6, 0., 0., 0., 0, 0, 0]
+    container3GraspPose = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]]
+    container3GraspOffset = [0., 0., 0.]
+
+    # hard-coded grasps
+    graspPose, deliveryRotation = {}, {}
+    graspPose["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
+    deliveryRotation["long bolts"] = -1.25
+    graspPose["short bolts"] = [-0.73155659,  4.31674214,  2.28878164, -2.73375183, -1.42453116,  1.24554766]
+    deliveryRotation["short bolts"] = 1.25
+    graspPose["propeller nut"] = [0.49796338, 1.90442473,  3.80338018, 2.63336638,  1.44877,  1.67975607]
+    deliveryRotation["propeller nut"] = -1.0
+    graspPose["tail bolt"] = [-0.48175263,  4.46387965,  2.68705579, -2.58115143, -1.7464862,   1.62214487]
+    deliveryRotation["tail bolt"] = 1.0  
+    graspPose["propellers"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
+    deliveryRotation["propellers"] = -1.0
+    graspPose["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
+    deliveryRotation["tool"] = 1.05
+    graspPose["propeller hub"] = [3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]  # [-3.10474485,  4.22540059,  2.02201284, -0.19095178,  1.02488858, -0.28577463]
+    deliveryRotation["propeller hub"] = -0.5
+    graspPose["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
+    deliveryRotation["tail wing"] = 0.7
+    
 
     # initialize sim environment
     world = ada.get_world()
-    viewer = ada.start_viewer("dart_markers/simple_trajectories", "map")
+    viewer = ada.start_viewer("airplane_assembly_demo", "map")
 
     # add parts to sim environment
-    wing = world.add_body_from_urdf(wingURDFUri, wingPose)
     storageInWorld = world.add_body_from_urdf(storageURDFUri, storagePose)
     container1_1 = world.add_body_from_urdf(container1URDFUri, container1_1Pose)
     container1_2 = world.add_body_from_urdf(container1URDFUri, container1_2Pose)
@@ -149,18 +178,19 @@ if not rospy.is_shutdown():
     container2_1 = world.add_body_from_urdf(container2URDFUri, container2_1Pose)
     container2_2 = world.add_body_from_urdf(container2URDFUri, container2_2Pose)
     container3_1 = world.add_body_from_urdf(container3URDFUri, container3_1Pose)
-    container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
+    # container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
+    tailWing = world.add_body_from_urdf(tailURDFUri, tailPose)
+    # wing = world.add_body_from_urdf(wingURDFUri, wingPose)
 
     # dict of all objects
-    objects = {"main wing": [wing, wingPose],
-               "long bolts": [container1_1, container1_1Pose],
-               "short bolts": [container1_2, container1_2Pose],
-               "propeller nut": [container1_3, container1_3Pose],
-               "tail bolt": [container1_4, container1_4Pose],
-               "propellers": [container2_1, container2_1Pose],
-               "tool": [container2_2, container2_2Pose],
-               "propeller hub": [container3_1, container3_1Pose],
-               "tail wing": [container3_2, container3_2Pose]}
+    objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
+               "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
+               "propeller nut": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
+               "tail bolt": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
+               "propellers": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
+               "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
+               "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
+               "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset]}
 
     # ------------------------------------------------ Get robot config ---------------------------------------------- #
 
@@ -183,14 +213,17 @@ if not rospy.is_shutdown():
     waypoints = [(0.0, positions), (1.0, armHome)]
     trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
     ada.execute_trajectory(trajectory)
-    toggleHand(hand, [0.5, 0.5])
+    toggleHand(hand, [0.15, 0.15])
   
     # ---------------------------------------------- Anticipation stuff ---------------------------------------------- #
 
     qf = pickle.load(open("q_values.p", "rb"))
     states = pickle.load(open("states.p", "rb"))
 
-    remaining_user_actions = [0, 1, 2, 3, 4, 5, 6, 7]
+    # actions in airplane assembly and objects required for each action
+    n_actions = 8
+    remaining_user_actions = list(range(n_actions))
+    action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
     required_objects = [["main wing"],
                         ["tail wing"],
                         ["long bolts"],
@@ -211,8 +244,8 @@ if not rospy.is_shutdown():
     # loop over all objects
     remaining_objects = objects.keys()
 
-    for step in range(17):
-        
+    for step in range(n_actions):
+
         # anticipate user action
         s = states.index(current_state)
         max_action_val = -np.inf
@@ -257,48 +290,59 @@ if not rospy.is_shutdown():
 
         for chosen_obj in objects_to_deliver:
 
-            obj = objects[chosen_obj][0]
-            objPose = objects[chosen_obj][1]
-            objPoseMat = [[1.0, 0.0, 0.0, objPose[0]],
-                          [0.0, 1.0, 0.0, objPose[1]],
-                          [0.0, 0.0, 1.0, objPose[2]],
-                          [0.0, 0.0, 0.0, 1.0]]
-            objTSR = createTSR(objPoseMat, hand)
-            # marker = viewer.add_tsr_marker(objTSR)
-
-            # -------------------------------------------- Collision detection ----------------------------------------------- #
-
-            # collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
-            #                                                                        [obj])
-            # full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
-            #                                                                      ada.get_arm_skeleton(),
-            #                                                                      collision_free_constraint)
-            # collision = ada.get_self_collision_constraint()
-
-
-            # ------------------------------------------- Setup IK for grasping ---------------------------------------------- #
-            
-            ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, objTSR, hand_node)
-            ik_generator = ik_sampleable.create_sample_generator()
-            configurations = []
-            samples = 0
-            maxSamples = 10
-            print("Finding IK configuration...")
-            while samples < maxSamples and ik_generator.can_sample():
-                goal_state = ik_generator.sample(arm_state_space)
-                samples += 1
-                if len(goal_state) == 0:
-                    continue
-                configurations.append(goal_state)   
-
-            # ------------------------------------------- Plan path for grasping -------------------------------------------- #
-            
-            if len(configurations) == 0:
-                print("No valid configurations found!")
+            if chosen_obj == "main wing":
+                print("Get the part by yourself.")
             else:
-                print("IK Configuration found!")
+                print("Providing the required part.")
 
-                collision = ada.get_self_collision_constraint()
+                obj = objects[chosen_obj][0]
+                objPose = objects[chosen_obj][1]
+                objGraspPose = objects[chosen_obj][2]
+                objOffset = objects[chosen_obj][3]
+                objPoseMat = [objGraspPose[0] + [objPose[0] + objOffset[0]],
+                              objGraspPose[1] + [objPose[1] + objOffset[1]],
+                              objGraspPose[2] + [objPose[2] + objOffset[2]],
+                             [0.0, 0.0, 0.0, 1.0]]
+                objTSR = createTSR(objPoseMat, hand)
+                # marker = viewer.add_tsr_marker(objTSR)
+                # raw_input("Does the marker look good?")
+
+                # ---------------------------------------- Collision detection --------------------------------------- #
+
+                # collision_free_constraint = ada.set_up_collision_detection(ada.get_arm_state_space(), ada.get_arm_skeleton(),
+                #                                                                        [obj])
+                # full_collision_constraint = ada.get_full_collision_constraint(ada.get_arm_state_space(),
+                #                                                                      ada.get_arm_skeleton(),
+                #                                                                      collision_free_constraint)
+                # collision = ada.get_self_collision_constraint()
+
+
+                # -------------------------------------- Plan path for grasping -------------------------------------- #
+                
+                if chosen_obj in graspPose.keys():
+                    print("Running hard-coded.")
+                    grasp_configuration = graspPose[chosen_obj]
+                else:
+                    # ------------------------------------- Setup IK for grasping ------------------------------------ #
+                    ik_sampleable = adapy.create_ik(arm_skeleton, arm_state_space, objTSR, hand_node)
+                    ik_generator = ik_sampleable.create_sample_generator()
+                    configurations = []
+                    samples = 0
+                    maxSamples = 1
+                    print("Finding IK configuration...")
+                    while samples < maxSamples and ik_generator.can_sample():
+                        goal_state = ik_generator.sample(arm_state_space)
+                        if len(goal_state) == 0:
+                            continue
+                        else:
+                            samples += 1
+                        configurations.append(goal_state)   
+                    
+                    print("Found new configuration.")
+                    grasp_configuration = configurations[0]
+
+                waypoints = [(0.0, armHome),(1.0, grasp_configuration)]
+                trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
 
                 # trajectory = None
                 # adaRRT = AdaRRT(start_state=np.array(armHome), goal_state=np.array(configuration[0]), step_size=0.05,
@@ -310,13 +354,6 @@ if not rospy.is_shutdown():
                 #     for i, waypoint in enumerate(path):
                 #         waypoints.append((0.0 + i, waypoint))
                 #     trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)  # 3
-               
-                waypoints = [(0.0,armHome),(1.0,configurations[0])]
-                trajectory = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
-
-                # tFile = open("trojectCSV/1.txt","w")
-                # pickle.dump(trajectory,tFile)
-                # tFile.close()
 
                 # ------------------------------------------ Execute path to grasp object --------------------------------- #
 
@@ -324,63 +361,69 @@ if not rospy.is_shutdown():
                     print("Failed to find a solution!")
                 else:
                     ada.execute_trajectory(trajectory)
+                    
+                    # lower the griper to grasp object
+                    waypoints = []
+                    for i in range(3):
+                        jac = arm_skeleton.get_linear_jacobian(hand_node)
+                        full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
+                        delta_x = np.array([0, 0, 0, 0, 0, 0.025])
+                        delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
+                        q = arm_skeleton.get_positions()
+                        new_q = q + delta_q
+                        waypoints.append((i, new_q))
+                        ada.set_positions(new_q)
+
+                    print("Picking up.")
+                    traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
+                    ada.execute_trajectory(traj)
+                    
+                    raw_input("Look good to grasp?")
+                    
                     toggleHand(hand, [1.5, 1.5])
-                    time.sleep(2)
+                    time.sleep(1.5)
                     hand.grab(obj)
 
                     # ----------------------- Lift up grasped object using Jacobian pseudo-inverse ------------------------ #
 
                     # lift up
                     waypoints = []
-                    for i in range(5):
+                    for i in range(6):
                         jac = arm_skeleton.get_linear_jacobian(hand_node)
                         full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
-                        delta_x = np.array([0, 0, 0, 0, 0, -0.05])
+                        delta_x = np.array([0, 0, 0, 0, 0, -0.025])
                         delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
                         q = arm_skeleton.get_positions()
-                        upWaypt = q + delta_q
-                        waypoints.append((i, upWaypt))
-                        ada.set_positions(upWaypt)
+                        new_q = q + delta_q
+                        waypoints.append((i, new_q))
+                        ada.set_positions(new_q)
 
                     print("Picking up.")
                     traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
                     ada.execute_trajectory(traj)
 
-                    # --------------- Move grasped object to workbench -------------- #
-
-                    # move forward
-                    # waypoints = []
-                    # for i in range(9):
-                    #     jac = arm_skeleton.get_linear_jacobian(hand_node)
-                    #     full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
-                    #     delta_x = np.array([0, 0, 0, 0, -0.05, 0])
-                    #     delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
-                    #     q = arm_skeleton.get_positions()
-                    #     forWaypt = q + delta_q
-                    #     waypoints.append((i, forWaypt))
-                    #     ada.set_positions(forWaypt)
-
+                    # ----------------------------------- Move grasped object to workbench ------------------------------- #
+                    
                     current_position = arm_skeleton.get_positions()
                     new_position = current_position.copy()
-                    new_position[0] -= 0.5
+                    new_position[0] += deliveryRotation[chosen_obj]
                     waypoints = [(0.0, current_position), (1.0, new_position)]
-                    print("Moving forward.")
                     traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
                     ada.execute_trajectory(traj)
 
                     # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
 
-                    # lower
+                    # keep down
                     waypoints = []
-                    for i in range(5):
+                    for i in range(4):
                         jac = arm_skeleton.get_linear_jacobian(hand_node)
                         full_jac = arm_skeleton.get_jacobian(hand.get_endeffector_body_node())
-                        delta_x = np.array([0, 0, 0, 0, 0, 0.05])
+                        delta_x = np.array([0, 0, 0, 0, 0, 0.025])
                         delta_q = np.matmul(np.linalg.pinv(full_jac), delta_x)
                         q = arm_skeleton.get_positions()
-                        upWaypt = q + delta_q
-                        waypoints.append((i, upWaypt))
-                        ada.set_positions(upWaypt)
+                        new_q = q + delta_q
+                        waypoints.append((i, new_q))
+                        ada.set_positions(new_q)
 
                     print("Keeping down.")
                     traj = ada.compute_joint_space_path(ada.get_arm_state_space(), waypoints)
@@ -408,7 +451,8 @@ if not rospy.is_shutdown():
                 user_action = a
 
         remaining_user_actions.remove(user_action)
-        _, current_state = transition(current_state, user_action) 
+        for _ in range(action_counts[user_action]):
+            _, current_state = transition(current_state, user_action) 
 
     # --------- Stop executor for real robot (not needed for sim) ----------- #
     if not sim:
@@ -416,23 +460,3 @@ if not rospy.is_shutdown():
 
 
 raw_input("Press Enter to Quit...")
-
-# # -------------------------------------------- Create TSR for grasping ------------------------------------------- #
-#
-# choosed_objectPose = wingPose
-#
-# objectPoseMat = [[1.0, 0.0, 0.0, choosed_objectPose[0]],
-#                  [0.0, 1.0, 0.0, choosed_objectPose[1]],
-#                  [0.0, 0.0, 1.0, choosed_objectPose[2]],
-#                  [0.0, 0.0, 0.0, 1.0]]
-# objectTSR = createTSR(objectPoseMat, hand)
-#
-# marker = viewer.add_tsr_marker(objectTSR)
-#
-# choosed_object2Pose = container2_1Pose
-#
-# object2PoseMat = [[0.0, 0.0, 1.0, choosed_object2Pose[0]],
-#                   [0.0, -1.0, 0.0, choosed_object2Pose[1]],
-#                   [1.0, 0.0, 0.0, choosed_object2Pose[2]],
-#                   [0.0, 0.0, 0.0, 1.0]]
-# object2TSR = createTSR(object2PoseMat, hand)

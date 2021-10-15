@@ -9,7 +9,7 @@ class UserInterface(QMainWindow):
 
         # window title and size
         self.setWindowTitle("Robot Commander")
-        self.setGeometry(250, 250, 500, 600)
+        self.setGeometry(0, 0, 1280, 720)
 
         # prompt
         self.query = QLabel(self)
@@ -35,7 +35,9 @@ class UserInterface(QMainWindow):
             buttons[-1].setCheckable(True)
             # buttons[-1].clicked.connect(self.set_choice)
             if opt in suggestions:
-                buttons[-1].setStyleSheet("background-color : yellow")
+                buttons[-1].setStyleSheet("QPushButton {background-color : lightgreen;} QPushButton::checked {background-color : lightpink;}")
+            else:
+                buttons[-1].setStyleSheet("QPushButton::checked {background-color : lightpink;}")
             option_y += 50    
         self.options = buttons
 
@@ -45,16 +47,17 @@ class UserInterface(QMainWindow):
         self.suggested_button.setText("Perform the SUGGESTED actions")
         self.suggested_button.setFont(QFont('Arial', 12))
         self.suggested_button.setGeometry(option_x, option_y, 275, 50)
-        self.suggested_button.setStyleSheet("background-color : yellow")
+        self.suggested_button.setStyleSheet("background-color : lightgreen")
         self.suggested_button.setCheckable(True)
         self.suggested_button.clicked.connect(self.set_choice)
 
         option_x = 100
-        option_y += 50
+        option_y += 75
         self.selected_button = QPushButton(self)
         self.selected_button.setText("Perform the SELECTED actions")
         self.selected_button.setFont(QFont('Arial', 12))
         self.selected_button.setGeometry(option_x, option_y, 275, 50)
+        self.selected_button.setStyleSheet("background-color : lightpink")
         self.selected_button.setCheckable(True)
         self.selected_button.clicked.connect(self.set_choice)
 

@@ -1,0 +1,19 @@
+<robot name="abstract_tail_wing">
+  <link name="abstract_tail_wing">
+    <collision>
+      <origin xyz="0 0 0.0075" />
+      <geometry>
+        <box size="0.55 0.175 0.015" />
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0.0075" />
+      <material name="sky blue">
+        <color rgba="0. 0.55 1.0 1.0" />
+      </material>
+      <geometry>
+        <box size="0.55 0.175 0.015" />
+      </geometry>
+    </visual>
+  </link>
+</robot>
