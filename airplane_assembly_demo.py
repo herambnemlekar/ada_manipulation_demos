@@ -108,145 +108,156 @@ rate = rospy.Rate(10)
 
 if not rospy.is_shutdown():
 
-    # initialize robot
-    ada = adapy.Ada(sim)
+class AssemblyController:
 
-    # ------------------------------------------ Create sim environment ---------------------------------------------- #
+    def __init__(self):
 
-    # objects in airplane assembly
-    storageURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/storage.urdf"
-    storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
+        # initialize robot
+        ada = adapy.Ada(sim)
 
-    wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
-    wingPose = [0.75, -0.3, 0., 0.5, 0.5, 0.5, 0.5]
+        # ------------------------------------------ Create sim environment ---------------------------------------------- #
 
-    tailURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_tail_wing.urdf"
-    tailPose = [-0.7, -0.25, 0.088, 0.5, 0.5, 0.5, 0.5]
-    tailGraspPose = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1]]
-    tailGraspOffset = [0., 0.175, 0.]
+        # objects in airplane assembly
+        storageURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/storage.urdf"
+        storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
 
-    container1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
-    container1_1Pose = [0.4, -0.4, 0., 0., 0., 0., 0.]
-    container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
-    container1_3Pose = [0.55, -0.3, 0., 0., 0., 0., 0.]
-    container1_4Pose = [-0.55, -0.3, 0., 0., 0., 0., 0.]
-    container1GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
-    container1GraspOffset = [0., -0.065, -0.005]
+        wingURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_main_wing.urdf"
+        wingPose = [0.75, -0.3, 0., 0.5, 0.5, 0.5, 0.5]
 
-    container2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
-    container2_1Pose = [0.4, -0.1, 0, 0., 0., 0., 0.]
-    container2_2Pose = [-0.4, -0.1, 0., 0., 0., 0., 0.]
-    container2GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
-    container2GraspOffset = [0., -0.115, 0.]
-    
-    container3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
-    container3_1Pose = [0.6, 0., 0., 0., 0., 0., 0.]
-    container3_2Pose = [-0.6, 0., 0., 0., 0, 0, 0]
-    container3GraspPose = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]]
-    container3GraspOffset = [0., 0., 0.]
+        tailURDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/abstract_tail_wing.urdf"
+        tailPose = [-0.7, -0.25, 0.088, 0.5, 0.5, 0.5, 0.5]
+        tailGraspPose = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1]]
+        tailGraspOffset = [0., 0.175, 0.]
 
-    # hard-coded grasps
-    graspPose, deliveryRotation = {}, {}
-    graspPose["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
-    deliveryRotation["long bolts"] = -1.25
-    graspPose["short bolts"] = [-0.73155659,  4.31674214,  2.28878164, -2.73375183, -1.42453116,  1.24554766]
-    deliveryRotation["short bolts"] = 1.25
-    graspPose["propeller nut"] = [0.49796338, 1.90442473,  3.80338018, 2.63336638,  1.44877,  1.67975607]
-    deliveryRotation["propeller nut"] = -1.0
-    graspPose["tail bolt"] = [-0.48175263,  4.46387965,  2.68705579, -2.58115143, -1.7464862,   1.62214487]
-    deliveryRotation["tail bolt"] = 1.0  
-    graspPose["propellers"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
-    deliveryRotation["propellers"] = -1.0
-    graspPose["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
-    deliveryRotation["tool"] = 1.05
-    graspPose["propeller hub"] = [3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]  # [-3.10474485,  4.22540059,  2.02201284, -0.19095178,  1.02488858, -0.28577463]
-    deliveryRotation["propeller hub"] = -0.5
-    graspPose["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
-    deliveryRotation["tail wing"] = 0.7
-    
+        container1URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_1.urdf"
+        container1_1Pose = [0.4, -0.4, 0., 0., 0., 0., 0.]
+        container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
+        container1_3Pose = [0.55, -0.3, 0., 0., 0., 0., 0.]
+        container1_4Pose = [-0.55, -0.3, 0., 0., 0., 0., 0.]
+        container1GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
+        container1GraspOffset = [0., -0.065, -0.005]
 
-    # initialize sim environment
-    world = ada.get_world()
-    viewer = ada.start_viewer("airplane_assembly_demo", "map")
+        container2URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_2.urdf"
+        container2_1Pose = [0.4, -0.1, 0, 0., 0., 0., 0.]
+        container2_2Pose = [-0.4, -0.1, 0., 0., 0., 0., 0.]
+        container2GraspPose = [[-1., 0., 0.], [0., -1., 0.], [0., 0., 1]]
+        container2GraspOffset = [0., -0.115, 0.]
+        
+        container3URDFUri = "package://libada/src/scripts/ada-pick-and-place-demos/urdf_collection/container_3.urdf"
+        container3_1Pose = [0.6, 0., 0., 0., 0., 0., 0.]
+        container3_2Pose = [-0.6, 0., 0., 0., 0, 0, 0]
+        container3GraspPose = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]]
+        container3GraspOffset = [0., 0., 0.]
 
-    # add parts to sim environment
-    storageInWorld = world.add_body_from_urdf(storageURDFUri, storagePose)
-    container1_1 = world.add_body_from_urdf(container1URDFUri, container1_1Pose)
-    container1_2 = world.add_body_from_urdf(container1URDFUri, container1_2Pose)
-    container1_3 = world.add_body_from_urdf(container1URDFUri, container1_3Pose)
-    container1_4 = world.add_body_from_urdf(container1URDFUri, container1_4Pose)
-    container2_1 = world.add_body_from_urdf(container2URDFUri, container2_1Pose)
-    container2_2 = world.add_body_from_urdf(container2URDFUri, container2_2Pose)
-    container3_1 = world.add_body_from_urdf(container3URDFUri, container3_1Pose)
-    # container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
-    tailWing = world.add_body_from_urdf(tailURDFUri, tailPose)
-    # wing = world.add_body_from_urdf(wingURDFUri, wingPose)
+        # hard-coded grasps
+        self.graspPose, self.deliveryRotation = {}, {}
+        self.graspPose["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
+        self.deliveryRotation["long bolts"] = -1.25
+        self.graspPose["short bolts"] = [-0.73155659,  4.31674214,  2.28878164, -2.73375183, -1.42453116,  1.24554766]
+        self.deliveryRotation["short bolts"] = 1.25
+        self.graspPose["propeller nut"] = [0.49796338, 1.90442473,  3.80338018, 2.63336638,  1.44877,  1.67975607]
+        self.deliveryRotation["propeller nut"] = -1.0
+        self.graspPose["tail bolt"] = [-0.48175263,  4.46387965,  2.68705579, -2.58115143, -1.7464862,   1.62214487]
+        self.deliveryRotation["tail bolt"] = 1.0  
+        self.graspPose["propellers"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
+        self.deliveryRotation["propellers"] = -1.0
+        self.graspPose["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
+        self.deliveryRotation["tool"] = 1.05
+        self.graspPose["propeller hub"] = [3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]  # [-3.10474485,  4.22540059,  2.02201284, -0.19095178,  1.02488858, -0.28577463]
+        self.deliveryRotation["propeller hub"] = -0.5
+        self.graspPose["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
+        self.deliveryRotation["tail wing"] = 0.7
+        
 
-    # dict of all objects
-    objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
-               "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
-               "propeller nut": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
-               "tail bolt": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
-               "propellers": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
-               "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
-               "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
-               "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset]}
+        # initialize sim environment
+        world = ada.get_world()
+        viewer = ada.start_viewer("airplane_assembly_demo", "map")
 
-    # ------------------------------------------------ Get robot config ---------------------------------------------- #
+        # add parts to sim environment
+        storageInWorld = world.add_body_from_urdf(storageURDFUri, storagePose)
+        container1_1 = world.add_body_from_urdf(container1URDFUri, container1_1Pose)
+        container1_2 = world.add_body_from_urdf(container1URDFUri, container1_2Pose)
+        container1_3 = world.add_body_from_urdf(container1URDFUri, container1_3Pose)
+        container1_4 = world.add_body_from_urdf(container1URDFUri, container1_4Pose)
+        container2_1 = world.add_body_from_urdf(container2URDFUri, container2_1Pose)
+        container2_2 = world.add_body_from_urdf(container2URDFUri, container2_2Pose)
+        container3_1 = world.add_body_from_urdf(container3URDFUri, container3_1Pose)
+        # container3_2 = world.add_body_from_urdf(container3URDFUri, container3_2Pose)
+        tailWing = world.add_body_from_urdf(tailURDFUri, tailPose)
+        # wing = world.add_body_from_urdf(wingURDFUri, wingPose)
 
-    collision = ada.get_self_collision_constraint()
+        # dict of all objects
+        self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
+                        "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
+                        "propeller nut": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
+                        "tail bolt": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
+                        "propellers": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
+                        "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
+                        "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
+                        "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset]}
 
-    arm_skeleton = ada.get_arm_skeleton()
-    positions = arm_skeleton.get_positions()
-    arm_state_space = ada.get_arm_state_space()
-    hand = ada.get_hand()
-    hand_node = hand.get_endeffector_body_node()
+        # ------------------------------------------------ Get robot config ---------------------------------------------- #
 
-    viewer.add_frame(hand_node)
+        collision = ada.get_self_collision_constraint()
 
-    # ------------------------------- Start executor for real robot (not needed for sim) ----------------------------- #
+        arm_skeleton = ada.get_arm_skeleton()
+        positions = arm_skeleton.get_positions()
+        arm_state_space = ada.get_arm_state_space()
+        hand = ada.get_hand()
+        hand_node = hand.get_endeffector_body_node()
 
-    if not sim:
-        ada.start_trajectory_executor() 
+        viewer.add_frame(hand_node)
 
-    armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
-    waypoints = [(0.0, positions), (1.0, armHome)]
-    trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
-    ada.execute_trajectory(trajectory)
-    toggleHand(hand, [0.15, 0.15])
-  
-    # ---------------------------------------------- Anticipation stuff ---------------------------------------------- #
+        # ------------------------------- Start executor for real robot (not needed for sim) ----------------------------- #
 
-    qf = pickle.load(open("q_values.p", "rb"))
-    states = pickle.load(open("states.p", "rb"))
+        if not sim:
+            ada.start_trajectory_executor() 
 
-    # actions in airplane assembly and objects required for each action
-    n_actions = 8
-    remaining_user_actions = list(range(n_actions))
-    action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
-    required_objects = [["main wing"],
-                        ["tail wing"],
-                        ["long bolts"],
-                        ["tail bolt"],
-                        ["tool"],
-                        ["tool"],
-                        ["propellers", "propeller hub", "short bolts", "tool"],
-                        ["propeller nut"]]
-    
-    current_state = states[0]
-    sensitivity = 0.0
+        armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
+        waypoints = [(0.0, positions), (1.0, armHome)]
+        trajectory = ada.compute_joint_space_path(arm_state_space, waypoints)
+        ada.execute_trajectory(trajectory)
+        toggleHand(hand, [0.15, 0.15])
+      
+        # ---------------------------------------------- Anticipation stuff ---------------------------------------------- #
 
-    # --------------------------------------------------- MAIN Loop -------------------------------------------------- #
+        qf = pickle.load(open("q_values.p", "rb"))
+        states = pickle.load(open("states.p", "rb"))
 
-    # initialize gui
-    app = QApplication(sys.argv)
+        # actions in airplane assembly and objects required for each action
+        n_actions = 8
+        remaining_user_actions = list(range(n_actions))
+        action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
+        required_objects = [["main wing"],
+                            ["tail wing"],
+                            ["long bolts"],
+                            ["tail bolt"],
+                            ["tool"],
+                            ["tool"],
+                            ["propellers", "propeller hub", "short bolts", "tool"],
+                            ["propeller nut"]]
+        
+        # --------------------------------------------------- MAIN Loop -------------------------------------------------- #
 
-    # loop over all objects
-    remaining_objects = objects.keys()
+        # loop over all objects
+        self.remaining_objects = objects.keys()
 
-    for step in range(n_actions):
+        # subscribe to action recognition
+        sub_act = rospy.Subscriber("/april_tag_detection", Float64MultiArray, self.callback, queue_size=1)
+
+        
+    def callback(self, data):
+
+        # update action sequence
+        if data != self.user_sequence:
+            self.user_sequence = data
+        else:
+            continue
+
+        # determine current state based on detected action sequence
 
         # anticipate user action
+        sensitivity = 0.0
         s = states.index(current_state)
         max_action_val = -np.inf
         candidates = []
@@ -266,7 +277,7 @@ if not rospy.is_shutdown():
         available_actions = list(set(applicants))
 
 
-        # objects required for anticipated actions
+        # determine objects required for anticipated actions
         available_objects = []
         suggested_objects = []
         for a in available_actions:
@@ -276,9 +287,12 @@ if not rospy.is_shutdown():
         available_objects = list(set(available_objects))
         suggested_objects = list(set(suggested_objects))
 
+        # initialize GUI interface
+        app = QApplication(sys.argv)
         win = UserInterface()
         win.set_options(available_objects, suggested_objects)
     
+        # keep GUI running until user input is received
         while not win.act:
             win.show()
             app.exec_()
