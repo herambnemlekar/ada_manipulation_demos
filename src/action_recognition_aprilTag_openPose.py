@@ -99,7 +99,7 @@ class Action:
 actions_list = [Action([0], 'Insert main wing into body', [[0, 1]]), #near tag 1
                Action([2, 4], 'Screw main wing to body', [[0, 1, 21, 17, 18]]), #near tag 1
                Action([1], 'Insert tail wing into body', [[0, 2]]), #near tag 2
-               Action([3, 5], 'Screw tail wing to body', [[0, 2, 21, 17, 18]]), #near tag 2
+               Action([3, 5], 'Screw tail wing to body', [[0, 2, 30, 17, 18]]), #near tag 2
                Action([6], 'Screw propeller to propeller base', [[5, 6, 19, 20, 14, 22, 17,18]]),
                Action([7], 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
                ]
@@ -144,7 +144,7 @@ def detect_apriltag(gray, image, state):
     # loop over the AprilTag detection results
     for r in results:
         # AprilTag state
-        if r.tag_id > 24:
+        if r.tag_id > 32:
             print("tag id:",r.tag_id)
             continue
 
@@ -203,7 +203,7 @@ def video_demo():
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
 
-    state = [0 for _ in range(30)]
+    state = [0 for _ in range(32)]
 
     video_name = "good assembly example"
     ground_truth_action_sequence = [1,7,8,2,5,6]

@@ -112,6 +112,7 @@ rate = rospy.Rate(10)
 class AssemblyController:
 
     def __init__(self):
+        self.started = False
 
         # initialize robot
         self.ada = adapy.Ada(sim)
@@ -253,7 +254,8 @@ class AssemblyController:
         detected_sequence = [int(a) for a in data.data]
 
         # wait for a new action to be detected
-        if len(detected_sequence) > len(self.user_sequence):
+        if not self.started or len(detected_sequence) > len(self.user_sequence):
+            self.started = True
             
             # update action sequence
             self.user_sequence = detected_sequence
