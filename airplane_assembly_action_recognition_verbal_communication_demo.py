@@ -13,6 +13,15 @@ from threading import Thread
 from adarrt import AdaRRT
 from std_msgs.msg import Float64MultiArray
 
+import gtts
+import difflib
+import speech_recognition as sr
+from playsound import playsound
+from pydub import AudioSegment
+from pydub.playback import play
+
+# from PyQt5.QtMultimedia import *
+# from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -107,7 +116,108 @@ def transition(s_from, a):
         return p, None
 
 
+def speak(text):
+        tts = gtts.gTTS(text)
+        tts.save("robot.mp3")
+        song = AudioSegment.from_mp3("robot.mp3")
+        play(song)
+
+
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
+
+
+class Worker(QObject):
+    suggested = pyqtSignal()
+    commanded = pyqtSignal(str)
+    finished = False
+
+    # intialize recorder
+    r = sr.Recognizer()
+    m = sr.Microphone()
+    with m as source:
+        print("A moment of silence, please...")
+        r.adjust_for_ambient_noise(source)
+        print("Set minimum energy threshold to {}".format(r.energy_threshold))
+
+    def run(self):
+
+        # # ask if the user wants the suggested part
+        # speak("Do you want the suggested parts?")
+        
+        heard, prompt_counter = None, 0
+        while (not heard) and (not self.finished) and (prompt_counter < 3):
+            
+            # ask if the user wants the suggested part
+            speak("Do you want the suggested parts?")
+            prompt_counter += 1
+
+            with self.m as source:
+                print("Speak now.")
+                audio = self.r.listen(source, phrase_time_limit=5)
+            print("Recognizing ...")
+            value = self.r.recognize_google(audio, show_all=True)
+            if value:
+                for val in value["alternative"]:
+                    if "yes" in val["transcript"]:
+                        heard = "yes"
+                        break
+                    elif "no" in val["transcript"]:
+                        heard = "no"
+                        break
+
+        if heard == "yes":
+            self.suggested.emit()
+        elif not self.finished:
+            speak("Which part do you want?")
+            self.listen()
+
+    def stop(self):
+        self.finished = True
+
+    def listen(self):
+        
+        parts = ["long", "short", "nut", "screw", "blade", "tool", "hub", "tail wing", "main", "body"]
+
+        part_dict = {
+        "long":"long bolt", 
+        "short":"short bolt", 
+        "nut":"propeller nut", 
+        "screw":"tail screw", 
+        "blade":"propeller blades", 
+        "tool":"tool", 
+        "hub":"propeller hub", 
+        "tail wing":"tail wing", 
+        "main":"main wing", 
+        "body":"airplane body"
+        }
+
+        part, ask_counter = None, 1
+        while (not part) and (not self.finished) and (ask_counter < 3):
+            with self.m as source:
+                print("Speak now.")
+                audio = self.r.listen(source, phrase_time_limit=10)
+            print("Recognizing ...")
+            value = self.r.recognize_google(audio, show_all=True)
+            if value:
+                detected = False
+                for p in parts:
+                    for pred in value["alternative"]:
+                        print(pred["transcript"])
+                        if p in pred["transcript"]:
+                            detected = True
+                            part = p
+                if detected:
+                    speak("Giving you the " + part_dict[part])
+                else:
+                    speak("Sorry. I didn't get that. Can you repeat?")
+                    ask_counter += 1
+            else:
+                speak("Sorry. I didn't get that. Can you repeat?")
+                ask_counter += 1
+
+        if part and (not self.finished):
+            self.commanded.emit(part)
+
 
 class AssemblyController:
 
@@ -158,10 +268,10 @@ class AssemblyController:
         self.deliveryRotation["short bolts"] = 1.25
         self.graspPose["propeller nut"] = [0.49796338, 1.90442473,  3.80338018, 2.63336638,  1.44877,  1.67975607]
         self.deliveryRotation["propeller nut"] = -1.1
-        self.graspPose["tail bolt"] = [-0.48175263,  4.46387965,  2.68705579, -2.58115143, -1.7464862,   1.62214487]
-        self.deliveryRotation["tail bolt"] = 1.0  
-        self.graspPose["propellers"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
-        self.deliveryRotation["propellers"] = -1.1
+        self.graspPose["tail screw"] = [-0.48175263,  4.46387965,  2.68705579, -2.58115143, -1.7464862,   1.62214487]
+        self.deliveryRotation["tail screw"] = 1.0  
+        self.graspPose["propeller blades"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
+        self.deliveryRotation["propeller blades"] = -1.1
         self.graspPose["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
         self.deliveryRotation["tool"] = 1.05
         self.graspPose["propeller hub"] = [3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]
@@ -190,8 +300,8 @@ class AssemblyController:
         self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
                         "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
                         "propeller nut": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
-                        "tail bolt": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
-                        "propellers": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
+                        "tail screw": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
+                        "propeller blades": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
                         "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
                         "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset],
@@ -240,23 +350,81 @@ class AssemblyController:
         self.required_objects = [["main wing", "airplane body"],
                                  ["tail wing", "airplane body"],
                                  ["long bolts", "tool"],
-                                 ["tail bolt", "tool"],
+                                 ["tail screw", "tool"],
                                  ["long bolts", "tool"],
-                                 ["tail bolt", "tool"],
-                                 ["propellers", "propeller hub", "short bolts", "tool"],
+                                 ["tail screw", "tool"],
+                                 ["propeller blades", "propeller hub", "short bolts", "tool"],
                                  ["propeller nut"]]
         
         # loop over all objects
         self.remaining_objects = self.objects.keys()
 
+        # ----------------------------------------- Robot control interface ----------------------------------------- #
+
+        # initialize GUI interface
+        app = QApplication(sys.argv)
+        self.initialize_app()
+        app.exec_()
+
         # subscribe to action recognition
         sub_act = rospy.Subscriber("/april_tag_detection", Float64MultiArray, self.callback, queue_size=1)
+
+
+        # simplified object names
+        self.parts = {"long": "long bolts",
+                      "short": "short bolts",
+                      "nut": "propeller nut",
+                      "screw": "tail screw",
+                      "blade": "propeller blades",
+                      "tool": "tool",
+                      "hub": "propeller hub",
+                      "tail wing": "tail wing",
+                      "main": "main wing",
+                      "body": "airplane body"}
 
         # initialize user sequence
         self.time_step = 0
         self.user_sequence = []
+
+        self.time_to_respond = 10
+
+
+    def initialize_app(self):
+
+        self.win = QMainWindow()
+        self.win.setWindowTitle("Robot Commander")
+        self.win.setGeometry(0, 0, 1280, 720)
+
+        instruct_button = QPushButton(self.win)
+        instruct_button.setText("Instructions")
+        instruct_button.setFont(QFont('Arial', 24))
+        instruct_button.setGeometry(600, 400, 600, 60)
+        instruct_button.clicked.connect(self.show_instructions)
+
+        start_button = QPushButton(self.win)
+        start_button.setText("Start Assembly")
+        start_button.setFont(QFont('Arial', 24))
+        start_button.setGeometry(600, 500, 600, 60)
+        start_button.clicked.connect(self.win.close)
+
+        self.win.showMaximized()
+    
+
+    def show_instructions(self):
+        # QMediaPlayer
+        self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile('runyu_fulltask.mp4')))
+
+        # Set widget
+        self.videoWidget = QVideoWidget()
+        # self.videoWidget.setGeometry(self.pos().x(), self.pos().y(), self.width(), self.height())
+        self.setCentralWidget(self.videoWidget)
+        self.mediaPlayer.setVideoOutput(self.videoWidget)
+
+        # Play
+        self.mediaPlayer.play()
         
-        
+    
     def callback(self, data):
 
         # current recognised action sequence
@@ -318,12 +486,12 @@ class AssemblyController:
 
         # initialize GUI interface
         app = QApplication(sys.argv)
-        self.start_application()
-        QTimer.singleShot(15000, self.win.close)
+        self.start_assembly()
+        # QTimer.singleShot(12000, self.win.close)
         app.exec_()
 
 
-    def start_application(self):
+    def start_assembly(self):
 
         options = deepcopy(self.remaining_objects)
         suggestions = deepcopy(self.suggested_objects)
@@ -360,7 +528,7 @@ class AssemblyController:
         self.win.step.setText("Current time step: " + str(self.time_step))
         self.win.step.setFont(QFont('Arial', 36))
         self.win.step.adjustSize()
-        self.win.step.move(1075, 125)
+        self.win.step.move(820, 125)
 
         # pre-text for suggestion action
         self.win.pre_text = QLabel(self.win)
@@ -407,7 +575,7 @@ class AssemblyController:
         self.win.suggested_button.setGeometry(option_x, option_y, 500, 50)
         self.win.suggested_button.setStyleSheet("background-color : lightgreen")
         self.win.suggested_button.setCheckable(True)
-        self.win.suggested_button.clicked.connect(self.deliver_part)
+        self.win.suggested_button.clicked.connect(self.deliver_suggested)
 
         # button for performing selected actions
         option_x = 130
@@ -418,34 +586,76 @@ class AssemblyController:
         self.win.selected_button.setGeometry(option_x, option_y, 500, 50)
         self.win.selected_button.setStyleSheet("background-color : lightpink")
         self.win.selected_button.setCheckable(True)
-        self.win.selected_button.clicked.connect(self.deliver_part)
+        self.win.selected_button.clicked.connect(self.deliver_selected)
+
+        # start timer
+        self.set_timer()
 
         # show full-screen window
         self.win.showMaximized()
 
-    def deliver_part(self):
-        
-        # check which objects were selected by the user       
-        if self.win.selected_button.isChecked():
-            for option in self.win.options:
+        # thread for verbal communication
+        self.worker = Worker()
+        self.thread = QThread(self.win)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.suggested.connect(self.deliver_suggested)
+        self.worker.suggested.connect(self.worker.deleteLater)
+        self.worker.commanded.connect(self.deliver_commanded)
+        self.worker.commanded.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+
+    def set_timer(self):
+        self.time_left = deepcopy(self.time_to_respond)
+        self.win.countdown = QLabel(self.win)
+        self.win.countdown.setText(str(self.time_left))
+        self.win.countdown.setFont(QFont('Arial', 36))
+        self.win.countdown.setStyleSheet("background-color: khaki")
+        self.win.countdown.adjustSize()
+        self.win.countdown.move(1720, 125)
+        self.win.timer = QTimer()
+        self.win.timer.timeout.connect(self.timer_update)
+        self.win.timer.start(1000)
+
+
+    def timer_update(self): 
+        self.time_left -=1
+        self.win.countdown.setText(" " + str(self.time_left) + " ")
+        if self.time_left == 0:
+            self.time_left = deepcopy(self.time_to_respond)
+            self.win.countdown.setText(str(self.time_left))
+
+
+    def deliver_suggested(self):
+        self.worker.stop()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.terminate()
+        self.deliver_part(self.suggested_objects)
+
+    def deliver_selected(self):
+        self.worker.stop()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.terminate()
+        selected_parts = []
+        for option in self.win.options:
                 if option.isChecked():
-                    self.win.user_choice.append(option.text())
-            objects_to_deliver = self.win.user_choice
+                    selected_parts.append(option.text())
+        self.deliver_part(selected_parts)
 
-        elif self.win.suggested_button.isChecked():
-            objects_to_deliver = self.suggested_objects
+    def deliver_commanded(self, part):
+        self.worker.stop()
+        self.thread.quit()
+        self.thread.wait()
+        self.thread.terminate()
+        commanded_part = self.parts[part]
+        self.deliver_part([commanded_part])
 
-        else:
-            objects_to_deliver = []
+    def deliver_part(self, objects_to_deliver):
 
-        
-        # if the user selected objects, deliver them, else deliver suggested objects
-        # if self.win.user_choice:
-        #     objects_to_deliver = self.win.user_choice
-        # else:
-        #     objects_to_deliver = self.suggested_objects
-
-        
         # loop over all objects to be delivered
         for chosen_obj in objects_to_deliver:
 
@@ -601,7 +811,7 @@ class AssemblyController:
         
         # self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in objects_to_deliver]
 
-        time.sleep(2)
+        time.sleep(3)
         self.win.close()
 
 

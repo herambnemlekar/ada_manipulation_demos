@@ -11,7 +11,7 @@ from collections import defaultdict
 import copy
 
 import rospy
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import *
 
 import pickle
 import numpy as np
@@ -96,15 +96,34 @@ class Action:
 #                Action(8, 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
 #                Action(9, 'Screw propeller cap to propeller base', [[0, 5, 6, 7, 8, 15, 23, 17], [0, 5, 6, 7, 8, 15, 23, 17]]),]
 
-actions_list = [Action([0], 'Insert main wing into body', [[0, 1]]), #near tag 1
-               Action([2, 4], 'Screw main wing to body', [[0, 1, 21, 17, 18]]), #near tag 1
-               Action([1], 'Insert tail wing into body', [[0, 2]]), #near tag 2
-               Action([3, 5], 'Screw tail wing to body', [[0, 2, 30, 17, 18]]), #near tag 2
-               Action([6], 'Screw propeller to propeller base', [[5, 6, 19, 20, 14, 22, 17,18]]),
-               Action([7], 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
-               ]
+# actions_list = [Action([0], 'Insert main wing into body', [[0, 1]]), #near tag 1
+#                Action([2, 4], 'Screw main wing to body', [[0, 1, 21, 17, 18]]), #near tag 1
+#                Action([1], 'Insert tail wing into body', [[0, 2]]), #near tag 2
+#                Action([3, 5], 'Screw tail wing to body', [[0, 2, 30, 17, 18]]), #near tag 2
+#                Action([6], 'Screw propeller to propeller base', [[5, 6, 19, 20, 14, 22, 17,18]]),
+#                Action([7], 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
+#                ]
 
                #13 shown: action 2 and action 6 finished
+
+parts_list = {"21": "long bolts",
+              "22": "short bolts",
+              "24": "propeller nut",
+              "30": "tail screw",
+              "20": "propeller blades",
+              "18": "tool",
+              "5": "propeller hub",
+              "2": "tail wing",
+              "1": "main wing",
+              "0": "airplane body"}
+
+actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
+               Action([2, 4], 'Screw main wing', [[0, 1, 21, 17, 18]]), #near tag 1
+               Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
+               Action([3, 5], 'Screw tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
+               Action([6], 'Screw propellers', [[5, 6, 19, 20, 14, 22, 17,18]]),
+               Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]]),
+               ]
 
 
 actions_from_part = defaultdict(set)
@@ -230,6 +249,7 @@ def video_demo():
 
         count = 0
         action_sequence = []
+        legible_action_sequence = " "
 
         while (True):
             ref, frame = capture.read()
@@ -372,16 +392,31 @@ def video_demo():
             for action in undone_actions:
                 if action.has_parts(part_set):
                     action_sequence += action.id
+                    legible_action_sequence += action.name + ", "
                     undone_actions.remove(action)
+           
 
-            cv2.rectangle(image, (0, 0), (500, 125), (0,0,0), -1)
-            cv2.putText(image, "Ground Truth Action Sequence: " + str(ground_truth_action_sequence), (5, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            cv2.putText(image, "Detected Action Sequence: " + str(action_sequence), (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-            cv2.putText(image, "detected tags: " + str(part_set), (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-            cv2.putText(image, "undone actions: " + str([x.id for x in undone_actions]), (5, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            legible_part_list = ""
+            for part_id in part_set:
+                if str(part_id) in parts_list.keys():
+                    legible_part_list += parts_list[str(part_id)] + ","
+            legible_part_list = legible_part_list[:-1]
+
+
+            cv2.rectangle(image, (0, 0), (1920, 100), (0,0,0), -1)
+            cv2.putText(image, "Detected Action Sequence: " + legible_action_sequence, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(image, "detected tags: " + legible_part_list, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
             cv2.imshow('AprilTag', image)
 
+
+
+            tag_info = MultiArrayDimension()
+            tag_info.label = legible_part_list
+            tag_layout = MultiArrayLayout()
+            tag_layout.dim = [tag_info]
+
             seq = Float64MultiArray()
+            seq.layout = tag_layout
             seq.data = np.array(action_sequence)
             ros_pub.publish(seq)
             
