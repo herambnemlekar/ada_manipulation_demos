@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import time
 import os
@@ -15,6 +17,9 @@ from std_msgs.msg import *
 
 import pickle
 import numpy as np
+
+
+# ---------------------------------------- Skeleton Tracking ----------------------------------------- #
 
 # Import Openpose (Windows/Ubuntu/OSX)
 # dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -69,8 +74,10 @@ import numpy as np
 # f.flush()
 
 
-# action recognition
+# --------------------------------------- Action Recognition ----------------------------------------- #
+
 txt_dir = "/home/suraj/aprilTagVideo/aprilTag_state/"
+
 
 class Action:
     def __init__(self, id = -1, name='', parts_combo = []):
@@ -81,8 +88,7 @@ class Action:
     def has_parts(self, part_set):
         for combo in self.parts_combo_list:
             if combo <= part_set:
-                return True 
-
+                return True
 
 
 # Requires all AprilTag for all parts (except for the tool and long screws) 
@@ -125,7 +131,6 @@ actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
                Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]]),
                ]
 
-
 actions_from_part = defaultdict(set)
 
 for action in actions_list:
@@ -134,12 +139,9 @@ for action in actions_list:
             actions_from_part[part].add(action)
 
 performed_actions = [0] * len(actions_list)
-
 undone_actions = copy.deepcopy(actions_list)
-
-# action_sequence = []
-
 part_set = set()
+
 
 def detect_apriltag(gray, image, state):
     global performed_actions, part_set, action_sequence
@@ -171,11 +173,8 @@ def detect_apriltag(gray, image, state):
             ifRecord = True
             # Action Detection
             part_set.add(r.tag_id)
-
-            
-
+    
         state[r.tag_id] = 1
-        #print(state)
 
         # extract the bounding box (x, y)-coordinates for the AprilTag
         # and convert each of the (x, y)-coordinate pairs to integers
@@ -206,7 +205,6 @@ def detect_apriltag(gray, image, state):
 
         # dist = (t[0] ** 2 + t[1] ** 2 + t[2] ** 2) ** 0.5
 
-        # showStr = "dist:" + str(dist)
         showStr = "ID: "+str(r.tag_id)
 
         cv2.putText(image, showStr, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
@@ -218,19 +216,14 @@ def detect_apriltag(gray, image, state):
 
 def video_demo():
 
-
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
 
     state = [0 for _ in range(32)]
 
-    video_name = "good assembly example"
     ground_truth_action_sequence = [1,7,8,2,5,6]
 
-    #capture = cv2.VideoCapture("../../aprilTagVideo/user_study_video/" + video_name + ".webm")
-
-    # capture = cv2.VideoCapture("/home/suraj/good assembly example.mkv")
-    capture = cv2.VideoCapture(0)
+    capture = cv2.VideoCapture(2)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     # capture.set(cv2.CAP_PROP_POS_FRAMES,6000)
@@ -241,193 +234,181 @@ def video_demo():
     # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
     # x, y, w, h = roi
 
-    with open(txt_dir + 'AprilTag_State_' + video_name + '.csv', 'w') as f:
-        writer = csv.writer(f)
+    count = 0
+    action_sequence = []
+    legible_action_sequence = " "
 
-        writer.writerow(['frameInd','timeStamp']+[str(x) for x in range(0,30)]+["performed actions"])
-        f.flush()
+    while (True):
+        
+        ref, frame = capture.read()
 
-        count = 0
-        action_sequence = []
-        legible_action_sequence = " "
+        # dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+        # # # dst = dst[y:y+h, x:x+w]
+        # frame = dst
 
-        while (True):
-            ref, frame = capture.read()
+        image = frame
 
-            # dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-            # # # dst = dst[y:y+h, x:x+w]
-            # frame = dst
-
-            image = frame
-
-            # # Process Image
-            # datum = op.Datum()
-            # imageToProcess = image
-            # datum.cvInputData = imageToProcess
-            # opWrapper.emplaceAndPop(op.VectorDatum([datum]))
+        # # Process Image
+        # datum = op.Datum()
+        # imageToProcess = image
+        # datum.cvInputData = imageToProcess
+        # opWrapper.emplaceAndPop(op.VectorDatum([datum]))
 
 
-            # #Display Image
-            # # print("Body keypoints: \n" + str(datum.poseKeypoints))
-            # # print("Left hand keypoints: \n" + str(datum.handKeypoints[0]))
-            # # print("Right hand keypoints: \n" + str(datum.handKeypoints[1]))
+        # #Display Image
+        # # print("Body keypoints: \n" + str(datum.poseKeypoints))
+        # # print("Left hand keypoints: \n" + str(datum.handKeypoints[0]))
+        # # print("Right hand keypoints: \n" + str(datum.handKeypoints[1]))
 
-            # jObject = {}
+        # jObject = {}
 
-            # jObject["poseKeypoints"] = None
-            # jObject["leftHandKeypoints"] = None
-            # jObject["rightHandKeypoints"] = None
-            
-            # x_max = 0
-            # y_max = 0
+        # jObject["poseKeypoints"] = None
+        # jObject["leftHandKeypoints"] = None
+        # jObject["rightHandKeypoints"] = None
+        
+        # x_max = 0
+        # y_max = 0
 
-            # #pose
-            # if not (datum.poseKeypoints is None):
+        # #pose
+        # if not (datum.poseKeypoints is None):
 
-            #     jObject["poseKeypoints"] = datum.poseKeypoints.tolist()
-
-
-            #     for j in range(0,len(datum.poseKeypoints)):
-
-            #         pk_list_1 = []
-
-            #         body_kps = datum.poseKeypoints[j]
-
-            #         for i in range(0,len(body_kps)):
-            #             x = body_kps[i][0]
-            #             y = body_kps[i][1]
-            #             confidence = body_kps[i][2]
-
-            #             #print("x:",x)
-            #             #print("y:",y)
-
-            #             x_max = max(x_max,x)
-            #             y_max = max(y_max,y)
-
-            #             radius = 5
-
-            #             image = cv2.circle(image,(x,y),radius,(0,255,0),-1)
-
-            
-            # # left hand
-            # if not (datum.handKeypoints[0] is None):
-
-            #     jObject["leftHandKeypoints"] = datum.handKeypoints[0].tolist()
+        #     jObject["poseKeypoints"] = datum.poseKeypoints.tolist()
 
 
-            #     for j in range(0,len(datum.handKeypoints[0])):
+        #     for j in range(0,len(datum.poseKeypoints)):
 
-            #         left_kps = datum.handKeypoints[0][j]
+        #         pk_list_1 = []
 
-            #         for i in range(0,len(left_kps)):
-            #             x = left_kps[i][0]
-            #             y = left_kps[i][1]
-            #             confidence = left_kps[i][2]
+        #         body_kps = datum.poseKeypoints[j]
 
-            #             # print("x:",x)
-            #             # print("y:",y)
+        #         for i in range(0,len(body_kps)):
+        #             x = body_kps[i][0]
+        #             y = body_kps[i][1]
+        #             confidence = body_kps[i][2]
 
-            #             x_max = max(x_max,x)
-            #             y_max = max(y_max,y)
+        #             #print("x:",x)
+        #             #print("y:",y)
 
-                        
-            #             radius = 2
+        #             x_max = max(x_max,x)
+        #             y_max = max(y_max,y)
 
-            #             image = cv2.circle(image,(x,y),radius,(0,0,255),-1) 
+        #             radius = 5
 
-            
-            # # right hand
-            # if not (datum.handKeypoints[1] is None):
+        #             image = cv2.circle(image,(x,y),radius,(0,255,0),-1)
 
-            #     jObject["rightHandKeypoints"] = datum.handKeypoints[1].tolist()
+        
+        # # left hand
+        # if not (datum.handKeypoints[0] is None):
 
-            #     for j in range(0,len(datum.handKeypoints[1])):
-
-            #         right_kps = datum.handKeypoints[1][j]
-
-            #         for i in range(0,len(right_kps)):
-            #             x = right_kps[i][0]
-            #             y = right_kps[i][1]
-            #             confidence = right_kps[i][2]
-
-            #             # print("x:",x)
-            #             # print("y:",y)
-
-            #             x_max = max(x_max,x)
-            #             y_max = max(y_max,y)
+        #     jObject["leftHandKeypoints"] = datum.handKeypoints[0].tolist()
 
 
-            #             radius = 2
+        #     for j in range(0,len(datum.handKeypoints[0])):
 
-            #             image = cv2.circle(image,(x,y),radius,(255,0,0),-1) 
-    
+        #         left_kps = datum.handKeypoints[0][j]
 
+        #         for i in range(0,len(left_kps)):
+        #             x = left_kps[i][0]
+        #             y = left_kps[i][1]
+        #             confidence = left_kps[i][2]
 
-            # curTime = time.time()
+        #             # print("x:",x)
+        #             # print("y:",y)
 
-            # writer.writerow([curTime,jObject["poseKeypoints"],jObject["leftHandKeypoints"],jObject["rightHandKeypoints"]])
-            
-            # f.flush()
+        #             x_max = max(x_max,x)
+        #             y_max = max(y_max,y)
 
-            # print("max_x",x_max)
-            # print("max_y",y_max)
+                    
+        #             radius = 2
 
-            # if curTime-starttime > 2.0:
-            #     #cv2.imwrite("sample_img/"+str(curTime)+".jpg",datum.cvOutputData)
-            #     starttime = curTime
+        #             image = cv2.circle(image,(x,y),radius,(0,0,255),-1) 
 
-               
+        
+        # # right hand
+        # if not (datum.handKeypoints[1] is None):
 
-            # action recognition
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        #     jObject["rightHandKeypoints"] = datum.handKeypoints[1].tolist()
 
-            image, ifRecord = detect_apriltag(gray, image.copy(), state)
+        #     for j in range(0,len(datum.handKeypoints[1])):
 
-            if ifRecord:
-                global performed_actions
-                writer.writerow([count, time.time()] + state + action_sequence)
-                print("state change!!")
-                f.flush()
+        #         right_kps = datum.handKeypoints[1][j]
 
-            for action in undone_actions:
-                if action.has_parts(part_set):
-                    action_sequence += action.id
-                    legible_action_sequence += action.name + ", "
-                    undone_actions.remove(action)
-           
+        #         for i in range(0,len(right_kps)):
+        #             x = right_kps[i][0]
+        #             y = right_kps[i][1]
+        #             confidence = right_kps[i][2]
 
-            legible_part_list = ""
-            for part_id in part_set:
-                if str(part_id) in parts_list.keys():
-                    legible_part_list += parts_list[str(part_id)] + ","
-            legible_part_list = legible_part_list[:-1]
+        #             # print("x:",x)
+        #             # print("y:",y)
+
+        #             x_max = max(x_max,x)
+        #             y_max = max(y_max,y)
 
 
-            cv2.rectangle(image, (0, 0), (1920, 100), (0,0,0), -1)
-            cv2.putText(image, "Detected Action Sequence: " + legible_action_sequence, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            cv2.putText(image, "detected tags: " + legible_part_list, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-            cv2.imshow('AprilTag', image)
+        #             radius = 2
+
+        #             image = cv2.circle(image,(x,y),radius,(255,0,0),-1) 
+
+        # curTime = time.time()
+
+        # writer.writerow([curTime,jObject["poseKeypoints"],jObject["leftHandKeypoints"],jObject["rightHandKeypoints"]])
+        
+        # f.flush()
+
+        # print("max_x",x_max)
+        # print("max_y",y_max)
+
+        # if curTime-starttime > 2.0:
+        #     #cv2.imwrite("sample_img/"+str(curTime)+".jpg",datum.cvOutputData)
+        #     starttime = curTime
 
 
+        # action recognition
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-            tag_info = MultiArrayDimension()
-            tag_info.label = legible_part_list
-            tag_layout = MultiArrayLayout()
-            tag_layout.dim = [tag_info]
+        image, ifRecord = detect_apriltag(gray, image.copy(), state)
 
-            seq = Float64MultiArray()
-            seq.layout = tag_layout
-            seq.data = np.array(action_sequence)
-            ros_pub.publish(seq)
-            
-            c = cv2.waitKey(1)
+        # if ifRecord:
+        #     global performed_actions
+        #     writer.writerow([count, time.time()] + state + action_sequence)
+        #     print("state change!!")
+        #     f.flush()
 
-            if c == 27:
-                capture.release()
-                f.close()
-                break
+        for action in undone_actions:
+            if action.has_parts(part_set):
+                action_sequence += action.id
+                legible_action_sequence += action.name + ", "
+                undone_actions.remove(action)
+       
+        legible_part_list = ""
+        for part_id in part_set:
+            if str(part_id) in parts_list.keys():
+                legible_part_list += parts_list[str(part_id)] + ","
+        legible_part_list = legible_part_list[:-1]
 
-            count+=1
+        cv2.rectangle(image, (0, 0), (1920, 100), (0,0,0), -1)
+        cv2.putText(image, "Detected Action Sequence: " + legible_action_sequence, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(image, "detected tags: " + legible_part_list, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.imshow('AprilTag', image)
+
+        tag_info = MultiArrayDimension()
+        tag_info.label = legible_part_list
+        tag_layout = MultiArrayLayout()
+        tag_layout.dim = [tag_info]
+
+        seq = Float64MultiArray()
+        seq.layout = tag_layout
+        seq.data = np.array(action_sequence)
+        ros_pub.publish(seq)
+        
+        c = cv2.waitKey(1)
+
+        if c == 27:
+            capture.release()
+            f.close()
+            break
+
+        count+=1
 
 rospy.init_node('april_tag_detection', anonymous=True)
 video_demo()
