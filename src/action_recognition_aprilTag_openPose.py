@@ -123,10 +123,20 @@ parts_list = {"21": "long bolts",
               "1": "main wing",
               "0": "airplane body"}
 
+# actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
+#                Action([2, 4], 'Screw main wing', [[0, 1, 21, 17, 18]]), #near tag 1
+#                Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
+#                Action([3, 5], 'Screw tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
+#                Action([6], 'Screw propellers', [[5, 6, 19, 20, 14, 22, 17,18]]),
+#                Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]]),
+#                ]
+
 actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
-               Action([2, 4], 'Screw main wing', [[0, 1, 21, 17, 18]]), #near tag 1
+               Action([2], 'Insert bolt in main wing', [[0, 1, 21]]), #near tag 1
+               Action([4], 'Screw bolt to main wing', [[0, 1, 21, 17, 18]]), #near tag 1
                Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
-               Action([3, 5], 'Screw tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
+               Action([3], 'Insert bolt in tail wing', [[0, 2, 30]]), #near tag 2
+               Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
                Action([6], 'Screw propellers', [[5, 6, 19, 20, 14, 22, 17,18]]),
                Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]]),
                ]
@@ -223,7 +233,7 @@ def video_demo():
 
     ground_truth_action_sequence = [1,7,8,2,5,6]
 
-    capture = cv2.VideoCapture(2)
+    capture = cv2.VideoCapture(0)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     # capture.set(cv2.CAP_PROP_POS_FRAMES,6000)
@@ -381,6 +391,7 @@ def video_demo():
                 undone_actions.remove(action)
        
         legible_part_list = ""
+        # print(legible_part_list, part_set)
         for part_id in part_set:
             if str(part_id) in parts_list.keys():
                 legible_part_list += parts_list[str(part_id)] + ","

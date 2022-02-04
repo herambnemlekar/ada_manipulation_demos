@@ -149,6 +149,7 @@ class AssemblyController(QMainWindow):
         self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
         self.deliveryRotation["short bolts"] = 1.25
         self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
+        # self.graspConfig["propeller nut"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
         self.deliveryRotation["propeller nut"] = -1.1
         self.graspConfig["tail screw"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
         self.deliveryRotation["tail screw"] = 1.0  
@@ -160,6 +161,8 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["propeller hub"] = -0.6
         self.graspConfig["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
         self.deliveryRotation["tail wing"] = 0.7
+        self.graspConfig["main wing"] = [-2.86840265, 3.89315136, 1.47980743, -3.07256298, 0.95719655, 2.37149834]
+        self.deliveryRotation["main wing"] = -0.7
 
         # initialize sim environment
         self.world = self.ada.get_world()
@@ -176,6 +179,7 @@ class AssemblyController(QMainWindow):
         container3_1 = self.world.add_body_from_urdf(container3URDFUri, container3_1Pose)
         # container3_2 = self.world.add_body_from_urdf(container3URDFUri, container3_2Pose)
         tailWing = self.world.add_body_from_urdf(tailURDFUri, tailPose)
+        mainWing = self.world.add_body_from_urdf(wingURDFUri, wingPose)
 
         # dict of all objects
         self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
@@ -186,7 +190,7 @@ class AssemblyController(QMainWindow):
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
                         "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
                         "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset],
-                        "main wing": [],
+                        "main wing": [mainWing],
                         "airplane body": []}
 
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
@@ -236,21 +240,21 @@ class AssemblyController(QMainWindow):
         query.setText("Which part(s) do you want?")
         query.setFont(QFont('Arial', 28))
         query.adjustSize()
-        query.move(145, 135)
+        query.move(95, 135)
 
         # task info
         assembly_image = QLabel(self)
-        pixmap = QPixmap("src/task.jpg")
-        pixmap = pixmap.scaledToWidth(950)
+        pixmap = QPixmap("src/actual_task.jpg")
+        pixmap = pixmap.scaledToWidth(1125)
         assembly_image.setPixmap(pixmap)
         assembly_image.adjustSize()
-        assembly_image.move(825, 200)
+        assembly_image.move(660, 145)
 
         # inputs
         options = deepcopy(self.remaining_objects)
 
         # print the options
-        option_x, option_y = 260, 200
+        option_x, option_y = 210, 200
         buttons = []
         for opt in options:
             opt_button = QPushButton(self)
@@ -264,7 +268,7 @@ class AssemblyController(QMainWindow):
         self.option_buttons = buttons
 
         # button for performing selected actions
-        option_x = 130
+        option_x = 85
         option_y += 60
         self.selected_button = QPushButton(self)
         self.selected_button.setText("Give me the selected parts.")
@@ -279,7 +283,7 @@ class AssemblyController(QMainWindow):
         self.step_label.setText("Current time step: " + str(self.time_step))
         self.step_label.setFont(QFont('Arial', 36))
         self.step_label.adjustSize()
-        self.step_label.move(820, 125)
+        self.step_label.move(715, 65)
 
         # update timer
         self.time_to_respond = 10
@@ -292,7 +296,7 @@ class AssemblyController(QMainWindow):
         self.countdown.setFont(QFont('Arial', 36))
         self.countdown.setStyleSheet("background-color: khaki")
         self.countdown.adjustSize()
-        self.countdown.move(1720, 125)
+        self.countdown.move(1720, 65)
         self.countdown_timer = QTimer()
         self.countdown_timer.timeout.connect(self.timer_update)
         
@@ -383,8 +387,6 @@ class AssemblyController(QMainWindow):
                 # -------------------------------------- Plan path for grasping -------------------------------------- #
                 
                 obj = self.objects[chosen_obj][0]
-                objPose = self.objects[chosen_obj][1]
-                objGraspPose = self.objects[chosen_obj][2]
 
                 # use pre-computed grasp configuration if available
                 if chosen_obj in self.graspConfig.keys():
@@ -392,6 +394,9 @@ class AssemblyController(QMainWindow):
                     grasp_configuration = self.graspConfig[chosen_obj]
                 else:
                     print("Creating new TSR.")
+                    objPose = self.objects[chosen_obj][1]
+                    objGraspPose = self.objects[chosen_obj][2]
+                    
                     # grasp TSR for object
                     objTSR = createTSR(objPose, objGraspPose)
                     # marker = viewer.add_tsr_marker(objTSR)
@@ -423,18 +428,26 @@ class AssemblyController(QMainWindow):
                 else:
                     # execute the planned trajectory
                     self.ada.execute_trajectory(trajectory)
-                    
+
                     # lower gripper
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.05])
+                    if chosen_obj == 'main wing':
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0.04, 0., 0.])
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
                     self.ada.execute_trajectory(traj)
                     
-                    # grasp the object                    
+                    # grasp the object
                     self.hand.execute_preshape([1.3, 1.3])
                     time.sleep(1.5)
                     self.hand.grab(obj)
 
                     # lift up grasped object
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
+                    if chosen_obj == 'main wing':
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.10])
+                        self.ada.execute_trajectory(traj)
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.2, 0., 0.])
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
                     self.ada.execute_trajectory(traj)
 
                     # move grasped object to workbench
@@ -447,8 +460,11 @@ class AssemblyController(QMainWindow):
 
                     # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
 
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.12])
-                    self.ada.execute_trajectory(traj)
+                    if chosen_obj == "main wing":
+                        time.sleep(4) 
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.10])
+                        self.ada.execute_trajectory(traj)
 
                     self.hand.ungrab()
                     self.hand.execute_preshape([0.15, 0.15])

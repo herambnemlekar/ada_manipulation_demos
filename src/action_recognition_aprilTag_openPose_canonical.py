@@ -91,28 +91,22 @@ class Action:
                 return True 
 
 
-# Requires all AprilTag for all parts (except for the tool and long screws) 
-# actions_list = [Action(1, 'Insert main wing into body', [[0, 1]]), #near tag 1
-#                Action(2, 'Screw main wing to body', [[0, 1, 21, 17, 18]), #near tag 1
-#                Action(3, 'Insert right wing tip into main wing', [[1, 4]]),
-#                Action(4, 'Insert left wing tip into main wing', [[1, 3]]),
-#                Action(5, 'Insert tail wing into body', [[0, 2]]),
-#                Action(6, 'Screw tail wing to body', [[0, 2, 13, 17], [0, 2, 21, 17], [0, 2, 13, 18], [0, 2, 21, 18]]),
-#                Action(7, 'Screw propeller to propeller base', [[5, 6, 19, 20, 14, 22, 17], [5, 6, 19, 20, 14, 22, 18]]),
-#                Action(8, 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
-#                Action(9, 'Screw propeller cap to propeller base', [[0, 5, 6, 7, 8, 15, 23, 17], [0, 5, 6, 7, 8, 15, 23, 17]]),]
+# parts_list = {"21": "long bolts",
+#               "22": "short bolts",
+#               "24": "short wire",
+#               "25": "large box",
+#               "26": "small box",
+#               "30": "long wire",
+#               }
 
-# actions_list = [Action([0], 'Insert main wing into body', [[0, 1]]), #near tag 1
-#                Action([2, 4], 'Screw main wing to body', [[0, 1, 21, 17, 18]]), #near tag 1
-#                Action([1], 'Insert tail wing into body', [[0, 2]]), #near tag 2
-#                Action([3, 5], 'Screw tail wing to body', [[0, 2, 30, 17, 18]]), #near tag 2
-#                Action([6], 'Screw propeller to propeller base', [[5, 6, 19, 20, 14, 22, 17,18]]),
-#                Action([7], 'Screw propeller base to body', [[0, 5, 6, 16, 24]]),
+# actions_list = [Action([0, 3], 'Screw long bolt', [[25, 21]]), 
+#                Action([1, 4], 'Screw short bolt', [[26, 22]]), 
+#                Action([2], 'Insert short wire', [[26, 24]]), 
+#                Action([5], 'Insert long wire', [[25, 30]]), 
 #                ]
 
-               #13 shown: action 2 and action 6 finished
-
-parts_list = {"21": "long bolts",
+parts_list = {"18": "tool",
+              "21": "long bolts",
               "22": "short bolts",
               "24": "short wire",
               "25": "large box",
@@ -120,10 +114,12 @@ parts_list = {"21": "long bolts",
               "30": "long wire",
               }
 
-actions_list = [Action([0, 3], 'Screw long bolt', [[25, 21]]), 
-               Action([1, 4], 'Screw short bolt', [[26, 22]]), 
-               Action([2], 'Insert short wire', [[26, 24]]), 
-               Action([5], 'Insert long wire', [[25, 30]]), 
+actions_list = [Action([0], 'Insert long bolt', [[25, 21]]),
+               Action([3], 'Screw long bolt', [[18, 25, 21]]),
+               Action([1], 'Insert short bolt', [[26, 22]]),
+               Action([4], 'Screw short bolt', [[18, 26, 22]]),
+               Action([2], 'Insert short wire', [[26, 24]]),
+               Action([5], 'Insert long wire', [[25, 30]]),
                ]
 
 actions_from_part = defaultdict(set)
@@ -219,7 +215,7 @@ def video_demo():
 
     ground_truth_action_sequence = [1,7,8,2,5,6]
 
-    capture = cv2.VideoCapture(0)
+    capture = cv2.VideoCapture(-2)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     # capture.set(cv2.CAP_PROP_POS_FRAMES,6000)
@@ -385,7 +381,7 @@ def video_demo():
         legible_part_list = ""
         for part_id in part_set:
             if str(part_id) in parts_list.keys():
-                legible_part_list += parts_list[str(part_id)] + ", "
+                legible_part_list += parts_list[str(part_id)] + ","
         legible_part_list = legible_part_list[:-1]
 
 

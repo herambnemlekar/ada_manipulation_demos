@@ -148,8 +148,9 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["long bolts"] = -1.34
         self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
         self.deliveryRotation["short bolts"] = 1.25
-        self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
-        self.deliveryRotation["propeller nut"] = -1.1
+        # self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
+        self.graspConfig["propeller nut"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
+        self.deliveryRotation["propeller nut"] = -1.6
         self.graspConfig["tail screw"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
         self.deliveryRotation["tail screw"] = 1.0  
         self.graspConfig["propeller blades"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
@@ -160,6 +161,8 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["propeller hub"] = -0.6
         self.graspConfig["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
         self.deliveryRotation["tail wing"] = 0.7
+        self.graspConfig["main wing"] = [-2.86840265, 3.89315136, 1.47980743, -3.07256298, 0.95719655, 2.37149834]
+        self.deliveryRotation["main wing"] = -0.7
 
         # initialize sim environment
         self.world = self.ada.get_world()
@@ -176,6 +179,7 @@ class AssemblyController(QMainWindow):
         container3_1 = self.world.add_body_from_urdf(container3URDFUri, container3_1Pose)
         # container3_2 = self.world.add_body_from_urdf(container3URDFUri, container3_2Pose)
         tailWing = self.world.add_body_from_urdf(tailURDFUri, tailPose)
+        mainWing = self.world.add_body_from_urdf(wingURDFUri, wingPose)
 
         # dict of all objects
         self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
@@ -186,7 +190,7 @@ class AssemblyController(QMainWindow):
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
                         "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
                         "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset],
-                        "main wing": [],
+                        "main wing": [mainWing],
                         "airplane body": []}
 
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
@@ -211,33 +215,7 @@ class AssemblyController(QMainWindow):
         self.ada.execute_trajectory(trajectory)
         self.hand.execute_preshape([0.15, 0.15])
       
-        # -------------------------------------- Assembly and Aniticipation Info ----------------------------------------- #
-
-        user_id = input("Enter user id: ")
-
-        # load the learned q_values for each state
-        self.qf = pickle.load(open("data/q_values_" + user_id + ".p", "rb"))
-        self.states = pickle.load(open("data/states_" + user_id + ".p", "rb"))
-
-        # actions in airplane assembly and objects required for each action
-        self.remaining_user_actions = [0, 1, 2, 3, 4, 5, 6, 7]
-        self.action_names = ["insert main wing",
-                             "insert tail wing",
-                             "insert long bolts",
-                             "insert tail screw",
-                             "screw long bolt",
-                             "screw tail screw",
-                             "screw propeller blades",
-                             "screw propeller base"]
-        self.action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
-        self.required_objects = [["main wing", "airplane body"],
-                                 ["tail wing", "airplane body"],
-                                 ["long bolts", "tool"],
-                                 ["tail", "tail screw"],
-                                 ["long bolts", "tool"],
-                                 ["tail screw", "tool"],
-                                 ["propeller blades", "propeller hub", "short bolts", "tool"],
-                                 ["propeller nut", "airplane body"]]
+        # ------------------------------------------------- Assembly Info ------------------------------------------------ #
         
         # objects yet to be delivered
         self.remaining_objects = list(self.objects.keys())
@@ -248,12 +226,8 @@ class AssemblyController(QMainWindow):
         # initialize user sequence
         self.time_step = 0
         self.user_sequence = []
-        self.anticipated_action_names = []
+        self.anticipated_action_name = []
         self.suggested_objects = []
-
-        # proactive
-        self.delivering_part = False
-        self.current_suggestion = None
 
         # ------------------------------------------------ GUI details --------------------------------------------------- #
 
@@ -278,8 +252,6 @@ class AssemblyController(QMainWindow):
 
         # inputs
         options = deepcopy(self.remaining_objects)
-        suggestions = deepcopy(self.suggested_objects)
-        suggestion_text = deepcopy(self.anticipated_action_names)
 
         # print the options
         option_x, option_y = 210, 200
@@ -290,30 +262,16 @@ class AssemblyController(QMainWindow):
             opt_button.setFont(QFont('Arial', 20))
             opt_button.setGeometry(option_x, option_y, 225, 50)
             opt_button.setCheckable(True)
-            if opt in suggestions:
-                opt_button.setStyleSheet("QPushButton {background-color : lightgreen;} QPushButton::checked {background-color : lightpink;}")
-            else:
-                opt_button.setStyleSheet("QPushButton::checked {background-color : lightpink;}")
+            opt_button.setStyleSheet("QPushButton::checked {background-color : lightpink;}")
             buttons.append(opt_button)
             option_y += 50    
         self.option_buttons = buttons
 
-        # button for performing suggested actions
-        option_x = 85
-        option_y += 50
-        self.suggested_button = QPushButton(self)
-        self.suggested_button.setText("YES. Give the parts you suggested.")
-        self.suggested_button.setFont(QFont('Arial', 20))
-        self.suggested_button.setGeometry(option_x, option_y, 500, 50)
-        self.suggested_button.setStyleSheet("background-color : lightgreen")
-        self.suggested_button.setCheckable(True)
-        self.suggested_button.clicked.connect(self.deliver_part)
-
         # button for performing selected actions
-        option_x = 80
-        option_y += 75
+        option_x = 85
+        option_y += 60
         self.selected_button = QPushButton(self)
-        self.selected_button.setText("NO. Give the parts I selected.")
+        self.selected_button.setText("Give me the selected parts.")
         self.selected_button.setFont(QFont('Arial', 20))
         self.selected_button.setGeometry(option_x, option_y, 500, 50)
         self.selected_button.setStyleSheet("background-color : lightpink")
@@ -326,21 +284,6 @@ class AssemblyController(QMainWindow):
         self.step_label.setFont(QFont('Arial', 36))
         self.step_label.adjustSize()
         self.step_label.move(715, 65)
-
-        # pre-text for suggestion action
-        pre_text = QLabel(self)
-        pre_text.setText("Suggested next action:")
-        pre_text.setFont(QFont('Arial', 36))
-        pre_text.adjustSize()
-        pre_text.move(715, 820)
-
-        # print the anticipated action
-        self.user_instruction = QLabel(self)
-        self.user_instruction.setText(str(suggestion_text))
-        self.user_instruction.setFont(QFont('Arial', 32))
-        self.user_instruction.adjustSize()
-        self.user_instruction.move(1235, 820)
-        self.user_instruction.setStyleSheet("color: green")
 
         # update timer
         self.time_to_respond = 10
@@ -374,10 +317,6 @@ class AssemblyController(QMainWindow):
         # update time stamp
         self.step_label.setText("Current time step: " + str(self.time_step))
 
-        # update anticipated action
-        self.user_instruction.setText(str(self.anticipated_action_names))
-        self.user_instruction.adjustSize()
-
         # update suggested options
         for opt_button in self.option_buttons:
             # opt_button.setChecked(False)
@@ -385,13 +324,10 @@ class AssemblyController(QMainWindow):
                 opt_button.setChecked(False)
                 opt_button.setCheckable(False)
                 opt_button.setStyleSheet("QPushButton {color : lightgrey;}")
-            elif opt_button.text() in self.suggested_objects:
-                opt_button.setStyleSheet("QPushButton {background-color : lightgreen;} QPushButton::checked {background-color : lightpink;}")
             else:
                 opt_button.setStyleSheet("QPushButton::checked {background-color : lightpink;}")
 
         # update action buttons
-        self.suggested_button.setChecked(False)
         self.selected_button.setChecked(False)
         
         
@@ -407,109 +343,11 @@ class AssemblyController(QMainWindow):
         self.user_sequence = detected_sequence
         self.time_step = len(self.user_sequence)
 
-        # determine current state based on detected action sequence
-        current_state = self.states[0]
-        for user_action in self.user_sequence:
-            for i in range(self.action_counts[user_action]):
-                p, next_state = transition(current_state, user_action)
-                current_state = next_state
-
         # update remaining parts
-        self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]
-
-        # ---------------------------------------- Anticipate next user action --------------------------------------- #
-        sensitivity = 0.0
-        max_action_val = -np.inf
-        available_actions, anticipated_actions = [], []
-        
-        for a in self.remaining_user_actions:
-            s_idx = self.states.index(current_state)
-            p, next_state = transition(current_state, a)
-            
-            # check if the action results in a new state
-            if next_state:
-                available_actions.append(a)
-
-                if self.qf[s_idx][a] > (1 + sensitivity) * max_action_val:
-                    anticipated_actions = [a]
-                    max_action_val = self.qf[s_idx][a]
-
-                elif (1 - sensitivity) * max_action_val <= self.qf[s_idx][a] <= (1 + sensitivity) * max_action_val:
-                    anticipated_actions.append(a)
-                    max_action_val = self.qf[s_idx][a]
-
-        # determine the legible names of the anticipated actions
-        self.anticipated_action_names = [self.action_names[a] for a in anticipated_actions]
-
-        # determine objects required for anticipated actions
-        suggested_objs = []
-        for a in anticipated_actions:
-            suggested_objs += [obj for obj in self.required_objects[a] if obj in self.remaining_objects]
-        suggested_objs = list(set(suggested_objs))
-
-        if not self.delivering_part and set(suggested_objs) != set(self.suggested_objects):
-            if suggested_objs:
-                self.current_suggestion = suggested_objs[0]
-                reached = self.reach_part(self.current_suggestion)
-                # self.ada.execute_trajectory(trajectory)
-
-            self.suggested_objects = deepcopy(suggested_objs)
-
-
-    def reach_part(self, chosen_obj, midpoint=False):
-
-        if chosen_obj not in ["main wing", "airplane body", "none"]:
-            obj = self.objects[chosen_obj][0]
-            objPose = self.objects[chosen_obj][1]
-            objGraspPose = self.objects[chosen_obj][2]
-
-            # use pre-computed grasp configuration if available
-            if chosen_obj in self.graspConfig.keys():
-                print("Running hard-coded...")
-                grasp_configuration = self.graspConfig[chosen_obj]
-            else:
-                print("Creating new TSR.")
-                # grasp TSR for object
-                objTSR = createTSR(objPose, objGraspPose)
-                # marker = viewer.add_tsr_marker(objTSR)
-                # input("Marker look good?")
-
-                # perform IK to compute grasp configuration
-                ik_sampleable = adapy.create_ik(self.arm_skeleton, self.arm_state_space, objTSR, self.hand_node)
-                ik_generator = ik_sampleable.create_sample_generator()
-                configurations = []
-                samples, max_samples = 0, 10
-                while samples < max_samples and ik_generator.can_sample():
-                    samples += 1
-                    goal_state = ik_generator.sample(self.arm_state_space)
-                    if len(goal_state) == 0:
-                        continue
-                    configurations.append(goal_state)
-                    print("Found new configuration.")
-
-                grasp_configuration = configurations[0]
-
-            # plan path to grasp configuration
-            if midpoint:
-                waypoints = [(0.0, self.ada.get_arm_positions()), (1.0, self.armHome), (2.0, grasp_configuration)]
-            else:
-                waypoints = [(0.0, self.ada.get_arm_positions()), (1.0, grasp_configuration)]
-            trajectory = self.ada.compute_joint_space_path(waypoints)
-
-            if not trajectory:
-                print("Failed to find a solution!")
-            else:
-                # execute the planned trajectory
-                self.ada.execute_trajectory(trajectory)
-                return True
-
-        return False
+        self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]        
 
 
     def deliver_part(self):
-
-        self.delivering_part = True
-        set_midpoint = False
         
         # check which objects were selected by the user       
         if self.selected_button.isChecked():
@@ -517,9 +355,6 @@ class AssemblyController(QMainWindow):
             for option in self.option_buttons:
                 if option.isChecked():
                     objects_to_deliver.append(option.text())
-            set_midpoint = True
-        elif self.suggested_button.isChecked():
-            objects_to_deliver = self.suggested_objects
         else:
             objects_to_deliver = []
         
@@ -527,13 +362,13 @@ class AssemblyController(QMainWindow):
         for chosen_obj in objects_to_deliver:
 
             # instruct the user to retreive the parts that cannot be delivered by the robot
-            if chosen_obj in ["main wing", "airplane body", "none"]:
+            if chosen_obj in ["airplane body", "none"]:
                 print("Cannot provide this part.")
                 msg = QMessageBox()
                 msg.setText("Get the parts you need while the robot waits.")
                 msg.setFont(QFont('Arial', 20))
                 msg.setWindowTitle("Robot Message")
-                QTimer.singleShot(4000, msg.close)    
+                QTimer.singleShot(10000, msg.close)    
                 msg.exec_()
             else:
                 # deliver parts requested by the user whenever possible
@@ -551,29 +386,75 @@ class AssemblyController(QMainWindow):
 
                 # -------------------------------------- Plan path for grasping -------------------------------------- #
                 
-                reached = self.reach_part(chosen_obj, midpoint=set_midpoint)
+                obj = self.objects[chosen_obj][0]
+
+                # use pre-computed grasp configuration if available
+                if chosen_obj in self.graspConfig.keys():
+                    print("Running hard-coded...")
+                    grasp_configuration = self.graspConfig[chosen_obj]
+                else:
+                    print("Creating new TSR.")
+                    objPose = self.objects[chosen_obj][1]
+                    objGraspPose = self.objects[chosen_obj][2]
+                    
+                    # grasp TSR for object
+                    objTSR = createTSR(objPose, objGraspPose)
+                    # marker = viewer.add_tsr_marker(objTSR)
+                    # input("Marker look good?")
+
+                    # perform IK to compute grasp configuration
+                    ik_sampleable = adapy.create_ik(self.arm_skeleton, self.arm_state_space, objTSR, self.hand_node)
+                    ik_generator = ik_sampleable.create_sample_generator()
+                    configurations = []
+                    samples, max_samples = 0, 10
+                    while samples < max_samples and ik_generator.can_sample():
+                        samples += 1
+                        goal_state = ik_generator.sample(self.arm_state_space)
+                        if len(goal_state) == 0:
+                            continue
+                        configurations.append(goal_state)
+                        print("Found new configuration.")
+
+                    grasp_configuration = configurations[0]
+
+                # plan path to grasp configuration
+                waypoints = [(0.0, self.armHome),(1.0, grasp_configuration)]
+                trajectory = self.ada.compute_joint_space_path(waypoints)
 
                 # ------------------------------------------ Execute path to grasp object --------------------------------- #
 
-                if not reached:
-                    print("Cannot pick the part.")
+                if not trajectory:
+                    print("Failed to find a solution!")
                 else:
                     # execute the planned trajectory
-                    # self.ada.execute_trajectory(trajectory)
+                    self.ada.execute_trajectory(trajectory)
                     
+                    input("Get in.")
+
                     # lower gripper
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
+                    if chosen_obj == 'main wing':
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0.04, 0., 0.])
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
                     self.ada.execute_trajectory(traj)
                     
-                    # grasp the object                    
+                    input("Grasp?")
+                    # grasp the object
                     self.hand.execute_preshape([1.3, 1.3])
                     time.sleep(1.5)
-                    # self.hand.grab(obj)
+                    self.hand.grab(obj)
 
+                    input("Lift?")
                     # lift up grasped object
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
+                    if chosen_obj == 'main wing':
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.10])
+                        self.ada.execute_trajectory(traj)
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.2, 0., 0.])
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
                     self.ada.execute_trajectory(traj)
 
+                    input("Move?")
                     # move grasped object to workbench
                     current_position = self.arm_skeleton.get_positions()
                     new_position = current_position.copy()
@@ -584,12 +465,15 @@ class AssemblyController(QMainWindow):
 
                     # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
 
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.10])
-                    self.ada.execute_trajectory(traj)
+                    if chosen_obj == "main wing":
+                        time.sleep(4) 
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.10])
+                        self.ada.execute_trajectory(traj)
 
-                    # self.hand.ungrab()
+                    self.hand.ungrab()
                     self.hand.execute_preshape([0.15, 0.15])
-                    # self.world.remove_skeleton(obj)
+                    self.world.remove_skeleton(obj)
                     time.sleep(1)
 
                     # ------------------- Move robot back to home ------------------- #
@@ -598,16 +482,13 @@ class AssemblyController(QMainWindow):
                     traj = self.ada.compute_joint_space_path(waypoints)
                     self.ada.execute_trajectory(traj)
 
-        self.delivering_part = False
         print("Finished executing actions.")
-        # trajectory = self.reach_part(self.suggested_objects[0])
-        # self.ada.execute_trajectory(trajectory)
 
 
 # MAIN
 # initialise ros node
-rospy.init_node("proactive_assembly")
-roscpp_init('proactive_assembly', [])
+rospy.init_node("reactive_assembly")
+roscpp_init('reactive_assembly', [])
 app = QApplication(sys.argv)
 win = AssemblyController()
 win.showMaximized()

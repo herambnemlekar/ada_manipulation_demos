@@ -153,7 +153,7 @@ class AssemblyController(QMainWindow):
         self.graspConfig["long wire"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
         self.deliveryRotation["long wire"] = 1.0  
         # self.graspConfig["small box"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
-        self.graspConfig["small box"] =[-2.44125532, 3.83132847, 1.41714937, -2.95087330, -0.85749472, -0.75164206]
+        self.graspConfig["small box"] =[-2.44054132, 3.90477552, 1.44756147, -2.95127490, -0.86210359, -0.75472121]
         self.deliveryRotation["small box"] = -1.1
         self.graspConfig["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
         self.deliveryRotation["tool"] = 1.05
@@ -236,21 +236,21 @@ class AssemblyController(QMainWindow):
         query.setText("Which part(s) do you want?")
         query.setFont(QFont('Arial', 28))
         query.adjustSize()
-        query.move(145, 135)
+        query.move(95, 135)
 
         # task info
         assembly_image = QLabel(self)
         pixmap = QPixmap("src/canonical_task.png")
-        pixmap = pixmap.scaledToWidth(950)
+        pixmap = pixmap.scaledToWidth(1125)
         assembly_image.setPixmap(pixmap)
         assembly_image.adjustSize()
-        assembly_image.move(825, 200)
+        assembly_image.move(660, 145)
 
         # inputs
         options = deepcopy(self.remaining_objects)
 
         # print the options
-        option_x, option_y = 260, 200
+        option_x, option_y = 210, 200
         buttons = []
         for opt in options:
             opt_button = QPushButton(self)
@@ -264,7 +264,7 @@ class AssemblyController(QMainWindow):
         self.option_buttons = buttons
 
         # button for performing selected actions
-        option_x = 130
+        option_x = 85
         option_y += 60
         self.selected_button = QPushButton(self)
         self.selected_button.setText("Give me the selected parts.")
@@ -279,7 +279,7 @@ class AssemblyController(QMainWindow):
         self.step_label.setText("Current time step: " + str(self.time_step))
         self.step_label.setFont(QFont('Arial', 36))
         self.step_label.adjustSize()
-        self.step_label.move(820, 125)
+        self.step_label.move(715, 65)
 
         # update timer
         self.time_to_respond = 10
@@ -292,7 +292,7 @@ class AssemblyController(QMainWindow):
         self.countdown.setFont(QFont('Arial', 36))
         self.countdown.setStyleSheet("background-color: khaki")
         self.countdown.adjustSize()
-        self.countdown.move(1720, 125)
+        self.countdown.move(1720, 65)
         self.countdown_timer = QTimer()
         self.countdown_timer.timeout.connect(self.timer_update)
         
@@ -425,7 +425,7 @@ class AssemblyController(QMainWindow):
                     self.ada.execute_trajectory(trajectory)
                     
                     # lower gripper
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.05])
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
                     self.ada.execute_trajectory(traj)
                     
                     # grasp the object                    
