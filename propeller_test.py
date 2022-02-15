@@ -436,6 +436,19 @@ class AssemblyController(QMainWindow):
 
                     #-------------------------------------------------------- changes ----------------------------------------------------------------------------------------#
                     if chosen_obj == "propeller blades":
+
+                        # turn the joint 5 to face the box towards the user
+                        current_position = self.arm_skeleton.get_positions()
+                        new_position = current_position.copy()
+                        new_position[5] += -1.0
+                        waypoints = [(0.0, current_position), (1.0, new_position)]
+                        traj = self.ada.compute_joint_space_path(waypoints)
+                        self.ada.execute_trajectory(traj)
+
+                        # move the robot forward
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.25, 0.])
+                        self.ada.execute_trajectory(traj)
+
                         # Hold the grasped object and wait for user to grab one propeller blade
                         time.sleep(5)
                     else:
@@ -449,7 +462,7 @@ class AssemblyController(QMainWindow):
                     # ----------------------- Move the container back if propeller ------------------------ #
                     if chosen_obj == "propeller blades":
                         # lift up grasped object
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.1])
                         self.ada.execute_trajectory(traj)
 
                         # move grasped object back to parts
