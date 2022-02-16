@@ -422,29 +422,31 @@ class AssemblyController(QMainWindow):
                     self.ada.execute_trajectory(traj)
 
                     # move grasped object to workbench
-                    current_position = self.arm_skeleton.get_positions()
-                    new_position = current_position.copy()
-                    new_position[0] += self.deliveryRotation[chosen_obj]
-                    waypoints = [(0.0, current_position), (1.0, new_position)]
-                    traj = self.ada.compute_joint_space_path(waypoints)
-                    self.ada.execute_trajectory(traj)
+                    
+                    #-------------------------------------------------------- changes ----------------------------------------------------------------------------------------#
+                    if chosen_obj == "propeller blades":
+                        # turn the joint 5 to face the box towards the user
+                        current_position = self.arm_skeleton.get_positions()
+                        new_position = current_position.copy()
+                        new_position[0] += self.deliveryRotation[chosen_obj]
+                        new_position[5] += -1.0
+                        waypoints = [(0.0, current_position), (1.0, new_position)]
+                        traj = self.ada.compute_joint_space_path(waypoints)
+                        self.ada.execute_trajectory(traj)
+                    else:
+                        current_position = self.arm_skeleton.get_positions()
+                        new_position = current_position.copy()
+                        new_position[0] += self.deliveryRotation[chosen_obj]
+                        waypoints = [(0.0, current_position), (1.0, new_position)]
+                        traj = self.ada.compute_joint_space_path(waypoints)
+                        self.ada.execute_trajectory(traj)
 
                     # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
 
                     if chosen_obj == "main wing":
                         time.sleep(4) 
 
-                    #-------------------------------------------------------- changes ----------------------------------------------------------------------------------------#
                     if chosen_obj == "propeller blades":
-
-                        # turn the joint 5 to face the box towards the user
-                        current_position = self.arm_skeleton.get_positions()
-                        new_position = current_position.copy()
-                        new_position[5] += -1.0
-                        waypoints = [(0.0, current_position), (1.0, new_position)]
-                        traj = self.ada.compute_joint_space_path(waypoints)
-                        self.ada.execute_trajectory(traj)
-
                         # move the robot forward
                         traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.25, 0.])
                         self.ada.execute_trajectory(traj)
