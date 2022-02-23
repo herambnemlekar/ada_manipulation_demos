@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import pdb
 import sys
 import time
@@ -78,29 +77,59 @@ class AssemblyController(QMainWindow):
         container3GraspOffset = [0., 0., 0.]
 
         # hard-coded grasps
-        self.graspConfig, self.deliveryRotation = {}, {}
-        self.graspConfig["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
-        self.deliveryRotation["long bolts"] = -1.34
-        self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
-        self.deliveryRotation["short bolts"] = 1.25
-        self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
-        # self.graspConfig["propeller nut"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
-        self.deliveryRotation["propeller nut"] = -1.1
-        self.graspConfig["tail screw"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
-        self.deliveryRotation["tail screw"] = 1.0  
-        self.graspConfig["propeller blades"] = [-2.65224753, 4.04064601,  1.51335391, -0.18831809,  0.71782515,  1.8779379 ]
-        #[-2.34985128, 4.05563485, 1.56017775, -2.94642629, -0.75563986, -0.58171179]# grasping from bottom of the container
-        # [-2.65224753  4.04064601  1.51335391 -0.18831809  0.71782515  1.8779379 ] a little to the right
-        #self.graspConfig["propeller blades"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
-        self.deliveryRotation["propeller blades"] = -1.1
-        self.graspConfig["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
+        self.graspConfig, self.deliveryRotation, self.deliveryHandRotation, self.lowerDistance = {}, {}, {}, {}
+
+        self.graspConfig["long bolts"] = [-2.06624655,  4.37198852,  2.3886246,  -2.84061763,  4.90123373, -6.59571791]
+        self.graspConfig["long bolts back"] = [-2.06807695,  4.2959132,   2.41701177, -2.789237,   11.03463327, -6.56036019]
+        #[-2.09854350, 4.27745083, 2.12565941, -2.91795263, -1.19278937, -0.39783092]
+        self.deliveryRotation["long bolts"] = -1.85
+        self.deliveryHandRotation["long bolts"] = -1.65
+        self.lowerDistance["long bolts"] = -0.14
+        # self.graspConfig["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
+        # self.deliveryRotation["long bolts"] = -1.34
+
+        # self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
+        # self.deliveryRotation["short bolts"] = 1.25
+        self.graspConfig["short bolts"] = [ -7.07682948,   4.45124074,   2.65111774,  -2.60687012,  17.12044212, -11.50343272]
+        #[-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
+        self.graspConfig["short bolts back"] = [ -7.07814016,   4.39303122,   2.67651871,  -2.55499361,  16.98924735,  -11.45468195]
+        self.deliveryRotation["short bolts"] = 1.85
+        self.deliveryHandRotation["short bolts"] = 1.35
+        self.lowerDistance["short bolts"] = -0.17
+
+
+        # self.graspConfig["short wire"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
+        # self.deliveryRotation["short wire"] = -1.1
+        # using propeller nut location for short wire
+        self.graspConfig["short wire"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
+        self.graspConfig["short wire lower"] = [-2.03990137,  4.21760047,  1.61261608, -0.17346979,  0.6146171,   2.24402321]
+        self.deliveryRotation["short wire"] = -2.5
+        self.deliveryHandRotation["short wire"] = -2.25
+        self.lowerDistance["short wire"] = -0.14
+
+        self.graspConfig["long wire"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
+        #[-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
+        self.deliveryRotation["long wire"] = 1.6
+        self.deliveryHandRotation["long wire"] = 1.35
+        self.lowerDistance["long wire"] = -0.18
+        #1.0  
+
+        # self.graspConfig["small box"] = [-2.4191907,  3.9942575,  1.29241768,  3.05926906, -0.50726387, -0.52933128]
+        self.graspConfig["small box"] =[-2.44054132, 3.90477552, 1.44756147, -2.95127490, -0.86210359, -0.75472121]
+        self.deliveryRotation["small box"] = -1.1
+
+        # self.graspConfig["large box"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
+        self.graspConfig["large box"] = [3.11715628, 1.88217232, 3.35777661, 0.68723824, -1.99417529, -0.89891913]
+        self.deliveryRotation["large box"] = 1.0
+
+        # self.graspConfig["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
+        # self.deliveryRotation["tool"] = 1.05
+        self.graspConfig["tool"] = [-0.39286100, 4.03060775, 1.54378641, -2.93910479, -0.79306859, 1.08912509]
         self.deliveryRotation["tool"] = 1.05
+        self.lowerDistance["tool"] = -0.05
+
         self.graspConfig["propeller hub"] = [3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]
         self.deliveryRotation["propeller hub"] = -0.6
-        self.graspConfig["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
-        self.deliveryRotation["tail wing"] = 0.7
-        self.graspConfig["main wing"] = [-2.86840265, 3.89315136, 1.47980743, -3.07256298, 0.95719655, 2.37149834]
-        self.deliveryRotation["main wing"] = -0.7
 
         # initialize sim environment
         self.world = self.ada.get_world()
@@ -117,19 +146,16 @@ class AssemblyController(QMainWindow):
         container3_1 = self.world.add_body_from_urdf(container3URDFUri, container3_1Pose)
         # container3_2 = self.world.add_body_from_urdf(container3URDFUri, container3_2Pose)
         tailWing = self.world.add_body_from_urdf(tailURDFUri, tailPose)
-        mainWing = self.world.add_body_from_urdf(wingURDFUri, wingPose)
 
         # dict of all objects
         self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
                         "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
-                        "propeller nut": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
-                        "tail screw": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
-                        "propeller blades": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
+                        "short wire": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
+                        "long wire": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
+                        "small box": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
-                        "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
-                        "tail wing": [tailWing, tailPose, tailGraspPose, tailGraspOffset],
-                        "main wing": [mainWing],
-                        "airplane body": []}
+                        # "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
+                        "large box": [tailWing, tailPose, tailGraspPose, tailGraspOffset]}
 
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
 
@@ -182,7 +208,7 @@ class AssemblyController(QMainWindow):
 
         # task info
         assembly_image = QLabel(self)
-        pixmap = QPixmap(directory_syspath + "/src/actual_task.jpg")
+        pixmap = QPixmap(directory_syspath + "/src/canonical_task.png")
         pixmap = pixmap.scaledToWidth(1125)
         assembly_image.setPixmap(pixmap)
         assembly_image.adjustSize()
@@ -325,47 +351,15 @@ class AssemblyController(QMainWindow):
                 # -------------------------------------- Plan path for grasping -------------------------------------- #
                 
                 obj = self.objects[chosen_obj][0]
+                objPose = self.objects[chosen_obj][1]
+                objGraspPose = self.objects[chosen_obj][2]
 
                 # use pre-computed grasp configuration if available
                 if chosen_obj in self.graspConfig.keys():
                     print("Running hard-coded...")
                     grasp_configuration = self.graspConfig[chosen_obj]
-
-                # if chosen_obj == "propeller blades":
-                #     print("Creating new TSR.")
-                #     objPose = self.objects[chosen_obj][1]
-                #     objGraspPose = self.objects[chosen_obj][2]
-
-                #     objPose[1] -= 0.08
-                #     objPose[2] -= 0.02
-                #     objPose[0] -= 0.01
-                    
-                #     # grasp TSR for object
-                #     objTSR = common.createTSR(objPose, objGraspPose)
-                #     # marker = viewer.add_tsr_marker(objTSR)
-                #     # input("Marker look good?")
-
-                #     # perform IK to compute grasp configuration
-                #     ik_sampleable = adapy.create_ik(self.arm_skeleton, self.arm_state_space, objTSR, self.hand_node)
-                #     ik_generator = ik_sampleable.create_sample_generator()
-                #     configurations = []
-                #     samples, max_samples = 0, 40
-                #     while samples < max_samples and ik_generator.can_sample():
-                #         samples += 1
-                #         goal_state = ik_generator.sample(self.arm_state_space)
-                #         if len(goal_state) == 0:
-                #             continue
-                #         configurations.append(goal_state)
-                #         print("Found new configuration.")
-
-                #     grasp_configuration = configurations[0]
-                #     print("propeller configurations: " + str(grasp_configuration))
-
                 else:
                     print("Creating new TSR.")
-                    objPose = self.objects[chosen_obj][1]
-                    objGraspPose = self.objects[chosen_obj][2]
-                    
                     # grasp TSR for object
                     objTSR = common.createTSR(objPose, objGraspPose)
                     # marker = viewer.add_tsr_marker(objTSR)
@@ -386,10 +380,10 @@ class AssemblyController(QMainWindow):
 
                     grasp_configuration = configurations[0]
 
-
                 # plan path to grasp configuration
                 waypoints = [(0.0, self.armHome),(1.0, grasp_configuration)]
                 trajectory = self.ada.compute_joint_space_path(waypoints)
+
 
                 # ------------------------------------------ Execute path to grasp object --------------------------------- #
 
@@ -399,102 +393,139 @@ class AssemblyController(QMainWindow):
                     # execute the planned trajectory
                     self.ada.execute_trajectory(trajectory)
 
-                    # lower gripper
-                    if chosen_obj == 'main wing':
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0.04, 0., 0.])
-                    else:
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
-                    self.ada.execute_trajectory(traj)
-                    
-                    # grasp the object
-                    self.hand.execute_preshape([1.2, 1.2])
-                    #self.hand.execute_preshape([1.3, 1.3])
-                    time.sleep(1.5)
-                    self.hand.grab(obj)
 
-                    # lift up grasped object
-                    if chosen_obj == 'main wing':
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.10])
-                        self.ada.execute_trajectory(traj)
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.2, 0., 0.])
-                    else:
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.15])
+
+                # test
+                # traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0.1, 0.1, 0.12])
+                # self.ada.execute_trajectory(traj)
+                # current_position = self.arm_skeleton.get_positions()
+                # print(current_position)
+
+                # input("Press ENTER to continue ...")
+
+                    
+                # lower gripper
+                if chosen_obj == "long wire":
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.04])
+                else:
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
+                self.ada.execute_trajectory(traj)
+                
+                # grasp the object                    
+                self.hand.execute_preshape([1.3, 1.3])
+                time.sleep(1.5)
+                self.hand.grab(obj)
+
+                # lift up grasped object
+                if chosen_obj in ["short bolts", "long wire"]:
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.2])
+                elif chosen_obj =="large box":
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.1])
+                else:
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.165])
+                self.ada.execute_trajectory(traj)
+
+                # move grasped object to workbench
+                if chosen_obj in ["tool"]:
+                    # move forward
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.55, 0.])
+                    self.ada.execute_trajectory(traj)
+                elif chosen_obj in ["long wire", "short wire", "long bolts", "short bolts"]:
+                    current_position = self.arm_skeleton.get_positions()
+                    new_position = current_position.copy()
+                    new_position[0] += self.deliveryRotation[chosen_obj]
+                    new_position[5] += self.deliveryHandRotation[chosen_obj]
+                    waypoints = [(0.0, current_position), (1.0, new_position)]
+                    traj = self.ada.compute_joint_space_path(waypoints)
+                    self.ada.execute_trajectory(traj)
+                elif chosen_obj in ["small box"]:
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.6, 0.])
+                    self.ada.execute_trajectory(traj)
+                else:
+                    current_position = self.arm_skeleton.get_positions()
+                    new_position = current_position.copy()
+                    new_position[0] += self.deliveryRotation[chosen_obj]
+                    waypoints = [(0.0, current_position), (1.0, new_position)]
+                    traj = self.ada.compute_joint_space_path(waypoints)
                     self.ada.execute_trajectory(traj)
 
-                    # move grasped object to workbench
-                    
-                    #-------------------------------------------------------- changes ----------------------------------------------------------------------------------------#
-                    if chosen_obj == "propeller blades":
-                        # turn the joint 5 to face the box towards the user
+                # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
+
+                # traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.125])
+                # self.ada.execute_trajectory(traj)
+
+                # ------------------- Hold Container for human to grab ------------------- # 
+                # test
+                time.sleep(1)
+
+                # ungrab if small box and large box
+                if chosen_obj in ["small box","large box"]:
+                    if chosen_obj == "small box":
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.13])
+                    else:
+                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.08])
+                    self.ada.execute_trajectory(traj)
+                    # ungrab
+                    self.hand.ungrab()
+                    self.hand.execute_preshape([0.15, 0.15])
+                    self.world.remove_skeleton(obj)
+                    time.sleep(1)
+
+                else:
+                # ------------------- Move Container back to original place if not boxes------------------- #
+                    if chosen_obj in ["long bolts", "short bolts", "long wire"]:
+                        #print("smoothier turn")
                         current_position = self.arm_skeleton.get_positions()
                         new_position = current_position.copy()
-                        new_position[0] += self.deliveryRotation[chosen_obj]
-                        new_position[5] += -1.0
-                        waypoints = [(0.0, current_position), (1.0, new_position)]
-                        traj = self.ada.compute_joint_space_path(waypoints)
-                        self.ada.execute_trajectory(traj)
-                    else:
+                        new_position[0] -= self.deliveryRotation[chosen_obj]
+                        new_position[5] -= self.deliveryHandRotation[chosen_obj]
+                        waypoints = [(0.0, current_position),(1.0, new_position)]
+                        trajectory = self.ada.compute_joint_space_path(waypoints)
+                        # if not trajectory:
+                        #     print("Failed to find a solution!")
+                        # else:
+                        #     # execute the planned trajectory
+                        #     self.ada.execute_trajectory(trajectory)
+                        # current_position = self.arm_skeleton.get_positions()
+                        # waypoints = [(0.0, current_position),(3.0, grasp_configuration)]
+                        # trajectory = self.ada.compute_joint_space_path(waypoints)
+                    elif chosen_obj in ["short wire"]:
                         current_position = self.arm_skeleton.get_positions()
                         new_position = current_position.copy()
-                        new_position[0] += self.deliveryRotation[chosen_obj]
-                        waypoints = [(0.0, current_position), (1.0, new_position)]
-                        traj = self.ada.compute_joint_space_path(waypoints)
-                        self.ada.execute_trajectory(traj)
-
-                    # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
-
-                    if chosen_obj == "main wing":
-                        time.sleep(4) 
-
-                    if chosen_obj == "propeller blades":
-                        # move the robot forward
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.25, 0.])
-                        self.ada.execute_trajectory(traj)
-
-                        # Hold the grasped object and wait for user to grab one propeller blade
-                        time.sleep(5)
+                        new_position[0] -= self.deliveryRotation[chosen_obj]
+                        new_position[5] -= self.deliveryHandRotation[chosen_obj]
+                        waypoints = [(0.0, current_position),(1.0, new_position)]
+                        trajectory = self.ada.compute_joint_space_path(waypoints)
                     else:
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.10])
-                        self.ada.execute_trajectory(traj)
-                        self.hand.ungrab()
-                        self.hand.execute_preshape([0.15, 0.15])
-                        self.world.remove_skeleton(obj)
-                        time.sleep(1)
-
-                    # ----------------------- Move the container back if propeller ------------------------ #
-                    if chosen_obj == "propeller blades":
-                        # lift up grasped object
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.1])
-                        self.ada.execute_trajectory(traj)
-
-                        # move grasped object back to parts
-
-                        # plan path to grasp configuration
                         current_position = self.arm_skeleton.get_positions()
                         waypoints = [(0.0, current_position),(1.0, grasp_configuration)]
                         trajectory = self.ada.compute_joint_space_path(waypoints)
 
-                        if not trajectory:
-                            print("Failed to find a solution!")
-                        else:
-                            # execute the planned trajectory
-                            self.ada.execute_trajectory(trajectory)
-                        
-                        # lower gripper
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
+                    if not trajectory:
+                        print("Failed to find a solution!")
+                    else:
+                        # execute the planned trajectory
+                        self.ada.execute_trajectory(trajectory)
+                    
+                    # lower gripper
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., self.lowerDistance[chosen_obj]])
+                    self.ada.execute_trajectory(traj)
+
+                    # ungrab
+                    self.hand.ungrab()
+                    self.hand.execute_preshape([0.15, 0.15])
+                    self.world.remove_skeleton(obj)
+                    time.sleep(1)
+
+                    # raise gripper
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.04])
+                    if traj:
                         self.ada.execute_trajectory(traj)
 
-                        # ungrab
-                        self.hand.ungrab()
-                        self.hand.execute_preshape([0.15, 0.15])
-                        self.world.remove_skeleton(obj)
-                        time.sleep(1)
-
-                    # ------------------- Move robot back to home ------------------- #
-
-                    waypoints = [(0.0, self.ada.get_arm_positions()), (1.0, self.armHome)]
-                    traj = self.ada.compute_joint_space_path(waypoints)
-                    self.ada.execute_trajectory(traj)
+                # ------------------- Move robot back to home ------------------- #
+                waypoints = [(0.0, self.ada.get_arm_positions()), (1.0, self.armHome)]
+                traj = self.ada.compute_joint_space_path(waypoints)
+                self.ada.execute_trajectory(traj)
 
         print("Finished executing actions.")
 
