@@ -187,12 +187,12 @@ def detect_apriltag(gray, image, state):
     # results = detector.detect(img=gray,True, camera_params=[544.021136,542.307110,308.111905,261.603373], tag_size=0.044)
     results = detector.detect(img=gray)
 
-    if len(results) > 0:
-        # print("[INFO] {} total AprilTags detected".format(len(results)))
-        useless = 0
-    else:
-        # print("No AprilTag Detected")
-        return image, ifRecord
+    # if len(results) > 0:
+    #     # print("[INFO] {} total AprilTags detected".format(len(results)))
+    #     useless = 0
+    # else:
+    #     # print("No AprilTag Detected")
+    #     return image, ifRecord
 
     # loop over the AprilTag detection results
 
@@ -221,10 +221,11 @@ def detect_apriltag(gray, image, state):
         elif r.tag_id == 19:
             part_set.add(r.tag_id)
             part_set.add(20)
+            #print("add propeller blades to the list")
 
         # AprilTag state
         elif r.tag_id > 32:
-            print("tag id:",r.tag_id)
+            #print("tag id:",r.tag_id)
             continue
 
         elif state[r.tag_id] == 0:
@@ -275,19 +276,24 @@ def detect_apriltag(gray, image, state):
     if long_bolt_counter<5 and long_bolts_detected == False and last_long_bolt_state == True:
         detect_long_bolt_action = True
         long_bolt_counter += 1
+        #print("increment counter long",long_bolt_counter)
     if long_bolt_counter == 4:
         part_set.add(21)
+        #print("add long bolt to the list")
+    
     last_long_bolt_state = long_bolts_detected
 
     if short_bolt_counter<5 and short_bolts_detected == False and last_short_bolt_state == True:
         detect_short_bolt_action = True
         short_bolt_counter += 1
+        #print("increment counter short",short_bolt_counter)
     if short_bolt_counter == 4:
         part_set.add(22)
+        #print("add short bolt to the list")
+    
     last_short_bolt_state = short_bolts_detected
 
     # print("[INFO] dist:",dist," tag pose:",t)
-
     return image, ifRecord
 
 
@@ -470,10 +476,9 @@ def video_demo():
                         action_sequence += action.id
                         legible_action_sequence += action.name + ", "
                         detect_propeller_action = False
-                        print("Propeller not done, add propeller sequence")
+                        #print("Propeller not done, add propeller sequence")
                     elif detect_propeller_action:
                         print(propeller_done)
-
             elif action.id == 2 or action.id == 4:
                 if long_bolt_counter < 5 and detect_long_bolt_action:
                     action_sequence += action.id

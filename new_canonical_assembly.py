@@ -283,7 +283,7 @@ class AssemblyController(QMainWindow):
 
         # update suggested options
         for opt_button in self.option_buttons:
-            # opt_button.setChecked(False)
+            opt_button.setChecked(False)
             if opt_button.text() not in self.remaining_objects:
                 opt_button.setChecked(False)
                 opt_button.setCheckable(False)
