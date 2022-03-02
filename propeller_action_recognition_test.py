@@ -155,7 +155,7 @@ actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
                Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
                Action([3], 'Insert bolt in tail wing', [[0, 2, 30]]), #near tag 2
                Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
-               Action([6], 'Screw one propellers', [[5, 6, 14, 19, 20, 22, 17,18]]), #x4 # 17: empty tool
+               Action([6], 'Screw one propellers', [[5, 6, 19, 20, 22, 17,18]]), #x4 # 17: empty tool
                Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]])
                ]
 
@@ -276,10 +276,10 @@ def detect_apriltag(gray, image, state):
     if long_bolt_counter<5 and long_bolts_detected == False and last_long_bolt_state == True:
         detect_long_bolt_action = True
         long_bolt_counter += 1
-        #print("increment counter long",long_bolt_counter)
-    if long_bolt_counter == 4:
+        print("increment counter long",long_bolt_counter)
+    if long_bolt_counter == 4 and not (21 in part_set):
         part_set.add(21)
-        #print("add long bolt to the list")
+        print("add long bolt to the list")
     
     last_long_bolt_state = long_bolts_detected
 
@@ -287,7 +287,7 @@ def detect_apriltag(gray, image, state):
         detect_short_bolt_action = True
         short_bolt_counter += 1
         #print("increment counter short",short_bolt_counter)
-    if short_bolt_counter == 4:
+    if short_bolt_counter == 4 and not (22 in part_set):
         part_set.add(22)
         #print("add short bolt to the list")
     
@@ -299,7 +299,9 @@ def detect_apriltag(gray, image, state):
 
 def video_demo():
     global propeller_done, detect_propeller_action, last_propeller_state
-
+    global detect_long_bolt_action, last_long_bolt_state, long_bolt_counter
+    global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter
+    
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
 
@@ -326,151 +328,21 @@ def video_demo():
         
         ref, frame = capture.read()
 
-        # dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
-        # # # dst = dst[y:y+h, x:x+w]
-        # frame = dst
-
         image = frame
-
-        # # Process Image
-        # datum = op.Datum()
-        # imageToProcess = image
-        # datum.cvInputData = imageToProcess
-        # opWrapper.emplaceAndPop(op.VectorDatum([datum]))
-
-
-        # #Display Image
-        # # print("Body keypoints: \n" + str(datum.poseKeypoints))
-        # # print("Left hand keypoints: \n" + str(datum.handKeypoints[0]))
-        # # print("Right hand keypoints: \n" + str(datum.handKeypoints[1]))
-
-        # jObject = {}
-
-        # jObject["poseKeypoints"] = None
-        # jObject["leftHandKeypoints"] = None
-        # jObject["rightHandKeypoints"] = None
-        
-        # x_max = 0
-        # y_max = 0
-
-        # #pose
-        # if not (datum.poseKeypoints is None):
-
-        #     jObject["poseKeypoints"] = datum.poseKeypoints.tolist()
-
-
-        #     for j in range(0,len(datum.poseKeypoints)):
-
-        #         pk_list_1 = []
-
-        #         body_kps = datum.poseKeypoints[j]
-
-        #         for i in range(0,len(body_kps)):
-        #             x = body_kps[i][0]
-        #             y = body_kps[i][1]
-        #             confidence = body_kps[i][2]
-
-        #             #print("x:",x)
-        #             #print("y:",y)
-
-        #             x_max = max(x_max,x)
-        #             y_max = max(y_max,y)
-
-        #             radius = 5
-
-        #             image = cv2.circle(image,(x,y),radius,(0,255,0),-1)
-
-        
-        # # left hand
-        # if not (datum.handKeypoints[0] is None):
-
-        #     jObject["leftHandKeypoints"] = datum.handKeypoints[0].tolist()
-
-
-        #     for j in range(0,len(datum.handKeypoints[0])):
-
-        #         left_kps = datum.handKeypoints[0][j]
-
-        #         for i in range(0,len(left_kps)):
-        #             x = left_kps[i][0]
-        #             y = left_kps[i][1]
-        #             confidence = left_kps[i][2]
-
-        #             # print("x:",x)
-        #             # print("y:",y)
-
-        #             x_max = max(x_max,x)
-        #             y_max = max(y_max,y)
-
-                    
-        #             radius = 2
-
-        #             image = cv2.circle(image,(x,y),radius,(0,0,255),-1) 
-
-        
-        # # right hand
-        # if not (datum.handKeypoints[1] is None):
-
-        #     jObject["rightHandKeypoints"] = datum.handKeypoints[1].tolist()
-
-        #     for j in range(0,len(datum.handKeypoints[1])):
-
-        #         right_kps = datum.handKeypoints[1][j]
-
-        #         for i in range(0,len(right_kps)):
-        #             x = right_kps[i][0]
-        #             y = right_kps[i][1]
-        #             confidence = right_kps[i][2]
-
-        #             # print("x:",x)
-        #             # print("y:",y)
-
-        #             x_max = max(x_max,x)
-        #             y_max = max(y_max,y)
-
-
-        #             radius = 2
-
-        #             image = cv2.circle(image,(x,y),radius,(255,0,0),-1) 
-
-        # curTime = time.time()
-
-        # writer.writerow([curTime,jObject["poseKeypoints"],jObject["leftHandKeypoints"],jObject["rightHandKeypoints"]])
-        
-        # f.flush()
-
-        # print("max_x",x_max)
-        # print("max_y",y_max)
-
-        # if curTime-starttime > 2.0:
-        #     #cv2.imwrite("sample_img/"+str(curTime)+".jpg",datum.cvOutputData)
-        #     starttime = curTime
-
 
         # action recognition
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         image, ifRecord = detect_apriltag(gray, image.copy(), state)
 
-        # if ifRecord:
-        #     global performed_actions
-        #     writer.writerow([count, time.time()] + state + action_sequence)
-        #     print("state change!!")
-        #     f.flush()
-
-        #//EDIT: action 6 needs to be added 4 times in the sequence
         for action in undone_actions:
-            if action.id == 6:
+            if action.id[0] == 6:
                 # special processing for action 6
-
-                #//FIX: nothing is being printed 
-                # if the box has been emptied
                 if action.has_parts(part_set):
                     propeller_done = True
                     undone_actions.remove(action)
                     legible_action_sequence += action.name + ", "
                     print("Propeller Done, add propeller sequence")
-
                 else:
                     if not propeller_done and detect_propeller_action:
                         action_sequence += action.id
@@ -479,7 +351,7 @@ def video_demo():
                         #print("Propeller not done, add propeller sequence")
                     elif detect_propeller_action:
                         print(propeller_done)
-            elif action.id == 2 or action.id == 4:
+            elif action.id[0] == 2 or action.id[0] == 4:
                 if long_bolt_counter < 5 and detect_long_bolt_action:
                     action_sequence += action.id
                     legible_action_sequence += action.name + ", "
@@ -488,8 +360,8 @@ def video_demo():
                 if long_bolt_counter == 4:
                     print("Long bolt done")
                     undone_actions.remove(action)
-
             elif action.has_parts(part_set):
+                print(action.id)
                 action_sequence += action.id
                 legible_action_sequence += action.name + ", "
                 undone_actions.remove(action)

@@ -305,7 +305,7 @@ class AssemblyController(QMainWindow):
 
         # update suggested options
         for opt_button in self.option_buttons:
-            opt_button.setChecked(False)
+            # opt_button.setChecked(False)
             if opt_button.text() not in self.remaining_objects:
                 opt_button.setChecked(False)
                 opt_button.setCheckable(False)
@@ -536,6 +536,11 @@ class AssemblyController(QMainWindow):
                 waypoints = [(0.0, self.ada.get_arm_positions()), (1.0, self.armHome)]
                 traj = self.ada.compute_joint_space_path(waypoints)
                 self.ada.execute_trajectory(traj)
+
+            # unselect part button after delivery
+            for opt_button in self.option_buttons:
+                if opt_button.text() == chosen_obj:
+                    opt_button.setChecked(False)
 
         print("Finished executing actions.")
 

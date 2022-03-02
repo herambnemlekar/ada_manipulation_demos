@@ -79,9 +79,11 @@ class AssemblyController(QMainWindow):
 
         # hard-coded grasps
         self.graspConfig, self.deliveryRotation = {}, {}
-        self.graspConfig["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
+        self.graspConfig["long bolts"] = [-2.06624655,  4.37198852,  2.3886246,  -2.84061763,  4.90123373, -6.59571791]
+        # [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
         self.deliveryRotation["long bolts"] = -1.34
-        self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
+        self.graspConfig["short bolts"] = [ -7.07682948,   4.45124074,   2.65111774,  -2.60687012,  17.12044212, -11.50343272]
+        # [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
         self.deliveryRotation["short bolts"] = 1.25
         self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
         # self.graspConfig["propeller nut"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
