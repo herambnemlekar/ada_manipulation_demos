@@ -301,7 +301,7 @@ def video_demo():
     global propeller_done, detect_propeller_action, last_propeller_state
     global detect_long_bolt_action, last_long_bolt_state, long_bolt_counter
     global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter
-    
+
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
 
@@ -345,16 +345,21 @@ def video_demo():
                     print("Propeller Done, add propeller sequence")
                 else:
                     if not propeller_done and detect_propeller_action:
+                        # comment these out if want to add the action once
                         action_sequence += action.id
                         legible_action_sequence += action.name + ", "
+                        
                         detect_propeller_action = False
                         #print("Propeller not done, add propeller sequence")
                     elif detect_propeller_action:
                         print(propeller_done)
             elif action.id[0] == 2 or action.id[0] == 4:
                 if long_bolt_counter < 5 and detect_long_bolt_action:
+
+                    # comment these out if want to add the action once
                     action_sequence += action.id
                     legible_action_sequence += action.name + ", "
+
                     detect_long_bolt_action = False
                     print("Add Long bolt actions")
                 if long_bolt_counter == 4:
