@@ -78,14 +78,14 @@ class AssemblyController(QMainWindow):
         container3GraspOffset = [0., 0., 0.]
 
         # hard-coded grasps
-        self.graspConfig, self.deliveryRotation, self.deliveryHandRotation, self.lowerDistance, self.liftDistance, self.waitTime, self.outDistance = {}, {}, {}, {}, {}, {}, {}
+        self.graspConfig, self.deliveryRotation, self.deliveryHandRotation, self.lowerDistance, self.liftOffset, self.waitTime = {}, {}, {}, {}, {}, {}
         self.graspConfig["long bolts"] = [-2.06624655,  4.37198852,  2.3886246,  -2.84061763,  4.90123373, -6.59571791]
         self.graspConfig["long bolts back"] = [-2.06807695,  4.2959132,   2.41701177, -2.789237,   11.03463327, -6.56036019]
         #[-2.09854350, 4.27745083, 2.12565941, -2.91795263, -1.19278937, -0.39783092]
         self.deliveryRotation["long bolts"] = -1.85
         self.deliveryHandRotation["long bolts"] = -1.65
         self.lowerDistance["long bolts"] = -0.135
-        self.liftDistance["long bolts"] = 0.15
+        self.liftOffset["long bolts"] = [0., 0., 0.15]
         self.waitTime["long bolts"] = 4
 
         self.graspConfig["short bolts"] = [ -7.07682948,   4.45124074,   2.65111774,  -2.60687012,  17.12044212, -11.50343272]
@@ -94,7 +94,7 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["short bolts"] = 1.85
         self.deliveryHandRotation["short bolts"] = 1.6
         self.lowerDistance["short bolts"] = -0.135
-        self.liftDistance["short bolts"] = 0.15
+        self.liftOffset["short bolts"] = [0., 0., 0.15]
         self.waitTime["short bolts"] = 4
 
         # self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
@@ -102,15 +102,15 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["propeller nut"] = -2.1
         self.deliveryHandRotation["propeller nut"] = -2.25
         self.lowerDistance["propeller nut"] = -0.135
-        self.liftDistance["propeller nut"] = 0.15
+        self.liftOffset["propeller nut"] = [0.2, 0., 0.15]
         self.waitTime["propeller nut"] = 4
-        self.outDistance["propeller nut"] = 0.2
+        #self.outDistance["propeller nut"] = 0.2
 
         self.graspConfig["tail screw"] = [-0.46015322, 4.47079882, 2.68192519, -2.584758426, -1.74260217, 1.457295330]
-        self.deliveryRotation["tail screw"] = 1.6  
+        self.deliveryRotation["tail screw"] = 1.5  
         self.deliveryHandRotation["tail screw"] = 1.35
         self.lowerDistance["tail screw"] = -0.135
-        self.liftDistance["tail screw"] = 0.15
+        self.liftOffset["tail screw"] = [0., 0., 0.15]
         self.waitTime["tail screw"] = 4
 
         self.graspConfig["propeller blades"] = [-2.65224753, 4.04064601,  1.51335391, -0.18831809,  0.71782515,  1.8779379 ]
@@ -120,35 +120,38 @@ class AssemblyController(QMainWindow):
         self.deliveryRotation["propeller blades"] = -1.5
         self.deliveryHandRotation["propeller blades"] = -1.5
         self.lowerDistance["propeller blades"] = -0.14
-        self.liftDistance["propeller blades"] = 0.15
+        self.liftOffset["propeller blades"] = [0.1, 0., 0.15]
         self.waitTime["propeller blades"] = 4
-        self.outDistance["propeller blades"] = 0.1
+        #self.outDistance["propeller blades"] = 0.1
 
         # self.graspConfig["tool"] = [-0.32843145,  4.02576609,  1.48440087, -2.87877031, -0.79457283,  1.40310179]
         self.graspConfig["tool"] = [-0.39286100, 4.03060775, 1.54378641, -2.93910479, -0.79306859, 1.08912509]
         self.deliveryRotation["tool"] = 1.5
-        self.deliveryHandRotation["tool"] = 1.8
+        self.deliveryHandRotation["tool"] = 1.65
         self.lowerDistance["tool"] = -0.14
-        self.liftDistance["tool"] = 0.15
+        self.liftOffset["tool"] = [0., 0., 0.15]
         self.waitTime["tool"] = 4
-        self.outDistance["tool"] = -0.1
+        #self.outDistance["tool"] = -0.1
 
         self.graspConfig["propeller hub"] = [-15.45968209,   4.28690186,   2.20877388,  -0.26991138,   1.17136384, -0.10107539]
         #[3.00773842,  4.21352853,  1.98663177, -0.17330897,  1.01156224, -0.46210507]
         self.deliveryRotation["propeller hub"] = -1.2
         self.deliveryHandRotation["propeller hub"] = -1.35
         self.lowerDistance["propeller hub"] = -0.14
-        self.liftDistance["propeller hub"] = 0.2
+        self.liftOffset["propeller hub"] = [0., 0., 0.2]
         self.waitTime["propeller hub"] = 4
 
         self.graspConfig["tail wing"] = [3.129024,  1.87404028,  3.40826295,  0.53502216, -1.86749865, -0.99044654]
-        self.deliveryRotation["tail wing"] = 1.0
+        self.deliveryRotation["tail wing"] = 1.15
         self.deliveryHandRotation["tail wing"] = -0.65
-        self.liftDistance["tail wing"] = 0.15
+        self.liftOffset["tail wing"] = [0., 0., 0.15]
+        self.waitTime["tail wing"] = 2
 
         self.graspConfig["main wing"] = [-2.86840265, 3.89315136, 1.47980743, -3.07256298, 0.95719655, 2.37149834]
         self.deliveryRotation["main wing"] = -0.75
         self.deliveryHandRotation["main wing"] = 0.0
+        self.waitTime["main wing"] = 2
+        self.liftOffset["main wing"] = [0., 0.10, 0.10]
 
         # initialize sim environment
         self.world = self.ada.get_world()
@@ -330,7 +333,8 @@ class AssemblyController(QMainWindow):
         self.time_step = len(self.user_sequence)
 
         # update remaining parts
-        self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]        
+        self.remaining_objects = [rem_obj for rem_obj in list(self.objects.keys()) if rem_obj not in detected_parts] 
+        # self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]        
 
 
     def deliver_part(self):
@@ -370,7 +374,7 @@ class AssemblyController(QMainWindow):
                 # collision = self.ada.get_self_collision_constraint()
 
 
-                # -------------------------------------- Plan path for grasping -------------------------------------- #
+                # ---------------------------------------- Plan path to object --------------------------------------- #
                 
                 obj = self.objects[chosen_obj][0]
 
@@ -387,7 +391,6 @@ class AssemblyController(QMainWindow):
                     # grasp TSR for object
                     objTSR = common.createTSR(objPose, objGraspPose)
                     # marker = viewer.add_tsr_marker(objTSR)
-                    # input("Marker look good?")
 
                     # perform IK to compute grasp configuration
                     ik_sampleable = adapy.create_ik(self.arm_skeleton, self.arm_state_space, objTSR, self.hand_node)
@@ -415,55 +418,40 @@ class AssemblyController(QMainWindow):
                     # execute the planned trajectory
                     self.ada.execute_trajectory(trajectory)
 
-
-                # test
-                # traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.03])
-                # self.ada.execute_trajectory(traj)
-                # current_position = self.arm_skeleton.get_positions()
-                # print(current_position)
-
-                # input("Press ENTER to continue ...")
-
-
-                # ------------------------------------------ Execute path to grasp object --------------------------------- #
+                # ---------------------------------- Move closer to object for grasping ------------------------------ #
 
                 # lower gripper
                 if chosen_obj == 'main wing':
                     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0.04, 0., 0.])
-                elif chosen_obj == "propeller hub":
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.05])
                 else:
                     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.045])
                 self.ada.execute_trajectory(traj)
                 
                 # grasp the object
-                if chosen_obj == "propeller blades":
-                    self.hand.execute_preshape([1.2, 1.2])
-                else:
-                    self.hand.execute_preshape([1.3, 1.3])
+                self.hand.execute_preshape([1.3, 1.3])
                 time.sleep(1)
                 self.hand.grab(obj)
 
                 # lift up grasped object
-                if chosen_obj == 'main wing':
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.10, 0.10])
-                    self.ada.execute_trajectory(traj)
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.1, 0.0, 0.0])
-                    self.ada.execute_trajectory(traj)
-                # elif chosen_obj == "propeller hub":
-                #     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., 0.2])
+                # if chosen_obj == 'main wing':
+                #     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0.10, 0.10])
                 #     self.ada.execute_trajectory(traj)
-                else:
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., self.liftDistance[chosen_obj]])
+                #     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.1, 0.0, 0.0])
+                #     self.ada.execute_trajectory(traj)
+                # else:
+                traj = self.ada.plan_to_offset("j2n6s200_hand_base", self.liftOffset[chosen_obj])
+                self.ada.execute_trajectory(traj)
+                if chosen_obj == "main wing":
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-0.1, 0.0, 0.0])
                     self.ada.execute_trajectory(traj)
 
                 
-                #-------------------------------------------------move grasped object to workbench----------------------------------------------#
+                #--------------------------------- Move grasped object to workbench ---------------------------------- #
 
                 # move outwards if propeller nut, propeller blades, tool
-                if chosen_obj in ["propeller nut", "propeller blades", "tool"]:
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [self.outDistance[chosen_obj], 0. ,0.])
-                    self.ada.execute_trajectory(traj)
+                # if chosen_obj in ["propeller nut", "propeller blades", "tool"]:
+                #     traj = self.ada.plan_to_offset("j2n6s200_hand_base", [self.outDistance[chosen_obj], 0. ,0.])
+                #     self.ada.execute_trajectory(traj)
 
                 current_position = self.arm_skeleton.get_positions()
                 new_position = current_position.copy()
@@ -473,26 +461,31 @@ class AssemblyController(QMainWindow):
                 traj = self.ada.compute_joint_space_path(waypoints)
                 self.ada.execute_trajectory(traj)
 
-                # ----------------------- Lower grasped object using Jacobian pseudo-inverse ------------------------ #
+                # ------------------------ Lower grasped object using Jacobian pseudo-inverse ------------------------ #
 
                 if chosen_obj in ["main wing", "tail wing"]: 
-
-                    if chosen_obj == "tail wing":
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., -0.10])
-                        self.ada.execute_trajectory(traj)
-
                     # ungrasp the main wing
-                    time.sleep(2)
+                    time.sleep(self.waitTime[chosen_obj])
                     self.hand.ungrab()
                     self.hand.execute_preshape([0.15, 0.15])
                     self.world.remove_skeleton(obj)
-
                 else:
                     # hold the grasped object and wait for user to grab one propeller blade
-                    time.sleep(self.waitTime[chosen_obj])
+                    if chosen_obj == "tool":
+                        # hold tool box until user picks up tool and put tool back
+                        while("tool" in self.remaining_objects):
+                            time.sleep(0.1)
+                        print("picked up tool")
+                        time.sleep(0.5)
+                        while ("tool" not in self.remaining_objects):
+                            time.sleep(1)
+                            print("tool is out")
+                        print("tool put back")
+                    else:
+                        time.sleep(self.waitTime[chosen_obj])
 
 
-                # ----------------------- Move the container back if not main wing and tail wing ------------------------ #
+                # ---------------------- Move the container back if not main wing and tail wing ----------------------- #
 
                     # move grasped object back to parts
 
@@ -511,12 +504,7 @@ class AssemblyController(QMainWindow):
 
 
                     # move inwards if propeller nut, propeller blades, tool
-                    if chosen_obj in ["propeller nut", "propeller blades", "tool"]:
-                        traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-self.outDistance[chosen_obj], 0. ,0.])
-                        self.ada.execute_trajectory(traj)
-
-                    # lower gripper
-                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [0., 0., self.lowerDistance[chosen_obj] ])
+                    traj = self.ada.plan_to_offset("j2n6s200_hand_base", [-self.liftOffset[chosen_obj][0], 0. ,self.lowerDistance[chosen_obj]])
                     self.ada.execute_trajectory(traj)
 
                     # ungrab

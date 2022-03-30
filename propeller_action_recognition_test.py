@@ -19,6 +19,10 @@ import pickle
 import numpy as np
 
 
+starttime_long_bolts = time.time()
+starttime_short_bolts = time.time()
+starttime_propeller_blades = time.time()
+starttime_tool = time.time()
 # ---------------------------------------- Skeleton Tracking ----------------------------------------- #
 
 # Import Openpose (Windows/Ubuntu/OSX)
@@ -77,17 +81,31 @@ import numpy as np
 propeller_done = False
 detect_propeller_action = False
 last_propeller_state = False
+propeller_off_counter = 0.0
+propeller_count = 0
 
 # global variables for detecting long bolts
-detect_long_bolt_action = False
 last_long_bolt_state = False
 long_bolt_counter = 0
+long_bolt_off_counter = 0.0
+insert_long_bolt_count = 0
+screw_long_bolt_count = 0
+took_all_long_bolt_left = False
 
 # global variables for detecting short bolts
 detect_short_bolt_action = False
 last_short_bolt_state = False
 short_bolt_counter = 0
+short_bolt_off_counter = 0.0
+took_all_short_bolt_left = False
 
+screw_propeller_action_count = 0
+
+detect_tool = False
+detect_empty_tool = False
+last_empty_tool = False 
+tool_off_counter = 0.0
+#detect_screw_action = False
 # --------------------------------------- Action Recognition ----------------------------------------- #
 
 txt_dir = "/home/suraj/aprilTagVideo/aprilTag_state/"
@@ -131,7 +149,7 @@ parts_list = {"21": "long bolts",
               "24": "propeller nut",
               "30": "tail screw",
               "20": "propeller blades",
-              "18": "tool",
+              "17": "tool",
               "5": "propeller hub",
               "2": "tail wing",
               "1": "main wing",
@@ -150,13 +168,13 @@ parts_list = {"21": "long bolts",
 # 19 is probably empty propeller blade container
 
 actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
-               Action([2], 'Insert bolt in main wing', [[0, 1, 21]]), #near tag 1
-               Action([4], 'Screw bolt to main wing', [[0, 1, 21, 17, 18]]), #near tag 1
+               Action([2], 'Insert bolt in main wing', [[0, 1]]), #near tag 1
+               Action([4], 'Screw bolt to main wing', [[0, 1, 27, 17]]), #near tag 1
                Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
                Action([3], 'Insert bolt in tail wing', [[0, 2, 30]]), #near tag 2
-               Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 18]]), #near tag 2
-               Action([6], 'Screw one propellers', [[5, 6, 19, 20, 22, 17,18]]), #x4 # 17: empty tool
-               Action([7], 'Fix propeller hub', [[0, 5, 6, 16, 24]])
+               Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 9]]), #near tag 2
+               Action([6], 'Screw one propellers', [[5, 17]]), #x4 # 17: empty tool
+               Action([7], 'Fix propeller hub', [[0, 5, 16, 24]])
                ]
 
 
@@ -173,10 +191,12 @@ part_set = set()
 
 
 def detect_apriltag(gray, image, state):
+    global starttime_long_bolts, starttime_short_bolts, starttime_propeller_blades, starttime_tool
     global performed_actions, part_set, action_sequence
-    global propeller_done, detect_propeller_action, last_propeller_state
-    global detect_long_bolt_action, last_long_bolt_state, long_bolt_counter
-    global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter
+    global propeller_done, detect_propeller_action, last_propeller_state, propeller_off_counter, propeller_count, screw_propeller_action_count
+    global last_long_bolt_state, long_bolt_counter, long_bolt_off_counter, insert_long_bolt_count, screw_long_bolt_count, took_all_long_bolt_left
+    global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter, short_bolt_off_counter, took_all_short_bolt_left
+    global detect_tool, detect_empty_tool, last_empty_tool, tool_off_counter
     
     ifRecord = False
 
@@ -202,6 +222,13 @@ def detect_apriltag(gray, image, state):
     propeller_detected = False
     long_bolts_detected = False
     short_bolts_detected = False
+    detect_tool = False 
+    detect_empty_tool = False
+
+    # ids = []
+    # for r in results:
+    #     ids.append(r.tag_id)
+    # print(ids)
 
     #//Edit: Need to add special process for tag 19 (empty propeller blade box) and 20(propeller blade)
     for r in results:
@@ -221,7 +248,31 @@ def detect_apriltag(gray, image, state):
         elif r.tag_id == 19:
             part_set.add(r.tag_id)
             part_set.add(20)
+            propeller_count = 4
             #print("add propeller blades to the list")
+
+        elif r.tag_id == 18:
+            # tool box
+            # detect_tool = True 
+            if not 18 in part_set:
+                part_set.add(18)
+
+        elif r.tag_id == 17:
+            # tool empty tag
+            detect_tool = True 
+            detect_empty_tool = True
+            if not 17 in part_set:
+                part_set.add(17)
+            
+        elif r.tag_id == 25:
+            took_all_long_bolt_left = True 
+
+        elif r.tag_id == 26:
+            took_all_short_bolt_left = True 
+
+        elif r.tag_id == 27:
+            if insert_long_bolt_count > screw_long_bolt_count and not 27 in part_set:
+                part_set.add(27)
 
         # AprilTag state
         elif r.tag_id > 32:
@@ -268,39 +319,78 @@ def detect_apriltag(gray, image, state):
 
         cv2.putText(image, showStr, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-    # updated global variables
-    if propeller_detected == False and last_propeller_state == True:
-        detect_propeller_action = True
-    last_propeller_state = propeller_detected 
+    # updated global variables with a timer
+    if not propeller_done:
+        # if propeller_detected and last_propeller_state == False and propeller_off_counter >= 3.0:
+        #     detect_propeller_action = True 
+        if propeller_detected == False and last_propeller_state == True:
+            starttime_propeller_blades = time.time()
+            if propeller_detected < 4:
+                propeller_count += 1
+        if propeller_detected == False and last_propeller_state == False:
+            propeller_off_counter = time.time() - starttime_propeller_blades
 
-    if long_bolt_counter<5 and long_bolts_detected == False and last_long_bolt_state == True:
-        detect_long_bolt_action = True
-        long_bolt_counter += 1
-        print("increment counter long",long_bolt_counter)
-    if long_bolt_counter == 4 and not (21 in part_set):
+    # increase count when first see the object
+    if long_bolt_counter<5 and not took_all_long_bolt_left:
+        if long_bolts_detected and last_long_bolt_state == False and long_bolt_off_counter >= 3.0: 
+            long_bolt_counter += 1
+            long_bolt_off_counter = 0.0
+            print("increment counter long",long_bolt_counter)
+            if long_bolt_counter == 4 and not (21 in part_set):
+                part_set.add(21)
+                print("add long bolt to the list")
+        if long_bolts_detected == False and last_long_bolt_state == True:
+            starttime_long_bolts = time.time()
+        if long_bolts_detected == False and last_long_bolt_state == False:
+            long_bolt_off_counter = time.time() - starttime_long_bolts
+    elif long_bolt_counter < 4 and took_all_long_bolt_left and not 21 in part_set:
         part_set.add(21)
-        print("add long bolt to the list")
-    
-    last_long_bolt_state = long_bolts_detected
 
-    if short_bolt_counter<5 and short_bolts_detected == False and last_short_bolt_state == True:
-        detect_short_bolt_action = True
-        short_bolt_counter += 1
-        #print("increment counter short",short_bolt_counter)
-    if short_bolt_counter == 4 and not (22 in part_set):
+
+    if short_bolt_counter<5 and not took_all_short_bolt_left:
+        if short_bolts_detected and last_short_bolt_state == False and short_bolt_off_counter >= 3.0:
+            detect_short_bolt_action = True
+            short_bolt_counter += 1
+            if short_bolt_counter == 4 and not (22 in part_set):
+                took_all_short_bolt_left = True
+                print("add all short bolts")
+                part_set.add(22)
+        if short_bolts_detected == False and last_short_bolt_state == True:
+            starttime_short_bolts = time.time()
+        if short_bolts_detected == False and last_short_bolt_state == False:
+            short_bolt_off_counter = time.time() - starttime_short_bolts
+    elif short_bolt_counter < 4 and took_all_short_bolt_left and not 22 in part_set:
+        print("add all short bolts")
+        short_bolt_counter = 4
         part_set.add(22)
-        #print("add short bolt to the list")
     
+    # tool
+    # if detect_empty_tool == True and last_empty_tool == False and tool_off_counter >=3.0:
+    #     detect_screw_action = True
+    if detect_empty_tool == False and last_empty_tool == True:
+        starttime_tool = time.time()
+    if detect_empty_tool == False and last_empty_tool == False:
+        tool_off_counter = time.time() - starttime_tool
+    if detect_empty_tool == False and detect_tool == False and tool_off_counter >= 3.0:
+        if 18 in part_set:
+            part_set.remove(18)
+        if 17 in part_set:
+            part_set.remove(17)
+
+    last_empty_tool = detect_empty_tool
     last_short_bolt_state = short_bolts_detected
+    last_long_bolt_state = long_bolts_detected
+    last_propeller_state = propeller_detected
 
     # print("[INFO] dist:",dist," tag pose:",t)
     return image, ifRecord
 
 
 def video_demo():
-    global propeller_done, detect_propeller_action, last_propeller_state
-    global detect_long_bolt_action, last_long_bolt_state, long_bolt_counter
-    global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter
+    global propeller_done, detect_propeller_action, last_propeller_state, propeller_count, screw_propeller_action_count
+    global last_long_bolt_state, long_bolt_counter, insert_long_bolt_count, screw_long_bolt_count, took_all_long_bolt_left
+    global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter, took_all_short_bolt_left
+    global detect_tool, detect_empty_tool, last_empty_tool, tool_off_counter
 
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
@@ -338,35 +428,53 @@ def video_demo():
         for action in undone_actions:
             if action.id[0] == 6:
                 # special processing for action 6
-                if action.has_parts(part_set):
+                if screw_propeller_action_count >= 4:
                     propeller_done = True
                     undone_actions.remove(action)
-                    legible_action_sequence += action.name + ", "
-                    print("Propeller Done, add propeller sequence")
+                    print("Propeller Done")
                 else:
-                    if not propeller_done and detect_propeller_action:
-                        # comment these out if want to add the action once
+                    if not propeller_done:
+                        if action.has_parts(part_set):
+                            #print(short_bolt_counter, propeller_count, screw_propeller_action_count)
+                            while min(short_bolt_counter, propeller_count) > screw_propeller_action_count:
+                                action_sequence += action.id
+                                legible_action_sequence += action.name + ", "
+                                screw_propeller_action_count += 1
+                                print("screw propeller count: ", screw_propeller_action_count)
+            elif action.id[0] == 2:
+                if long_bolt_counter < 5 and took_all_long_bolt_left:
+                    long_bolt_counter = 4
+                    if action.has_parts(part_set):
+                        while insert_long_bolt_count < long_bolt_counter:
+                            action_sequence += action.id
+                            legible_action_sequence += action.name + ", "
+                            print("Add Insert Long bolt actions")
+                            insert_long_bolt_count += 1
+                elif long_bolt_counter < 5 and not took_all_long_bolt_left:
+                    if action.has_parts(part_set):
+                        while insert_long_bolt_count < long_bolt_counter:
+                            action_sequence += action.id
+                            legible_action_sequence += action.name + ", "
+                            print("Add Insert Long bolt actions")
+                            insert_long_bolt_count += 1
+                if insert_long_bolt_count == 4:
+                    print("Insert Long bolt done")
+                    undone_actions.remove(action)
+
+            elif action.id[0] == 4:
+                # screw long bolt
+                if action.has_parts(part_set):
+                    if long_bolt_counter < 5 and insert_long_bolt_count > screw_long_bolt_count:
                         action_sequence += action.id
                         legible_action_sequence += action.name + ", "
-                        
-                        detect_propeller_action = False
-                        #print("Propeller not done, add propeller sequence")
-                    elif detect_propeller_action:
-                        print(propeller_done)
-            elif action.id[0] == 2 or action.id[0] == 4:
-                if long_bolt_counter < 5 and detect_long_bolt_action:
-
-                    # comment these out if want to add the action once
-                    action_sequence += action.id
-                    legible_action_sequence += action.name + ", "
-
-                    detect_long_bolt_action = False
-                    print("Add Long bolt actions")
-                if long_bolt_counter == 4:
-                    print("Long bolt done")
-                    undone_actions.remove(action)
+                        screw_long_bolt_count += 1
+                        print("Add Screw Long bolt actions")
+                        part_set.remove(27)
+                    if screw_long_bolt_count == 4:
+                        undone_actions.remove(action)
+                        print("Screw Long bolt done")
             elif action.has_parts(part_set):
-                print(action.id)
+                #print(action.id)
                 action_sequence += action.id
                 legible_action_sequence += action.name + ", "
                 undone_actions.remove(action)
@@ -380,8 +488,16 @@ def video_demo():
 
 
         cv2.rectangle(image, (0, 0), (1920, 100), (0,0,0), -1)
-        cv2.putText(image, "Detected Action Sequence: " + legible_action_sequence, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(image, "detected tags: " + legible_part_list, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.putText(image, "detected tags: " + legible_part_list, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        display_text = "Detected Action Sequence: " + legible_action_sequence
+        line_length = 160
+        start_index = 0
+        start_height = 75
+        while start_index < len(display_text):
+            end_index =  len(display_text) if start_index+line_length > len(display_text) else start_index+line_length
+            cv2.putText(image, display_text[start_index:end_index], (5, start_height), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            start_index += line_length
+            start_height += 35
         cv2.imshow('AprilTag', image)
 
         tag_info = MultiArrayDimension()
