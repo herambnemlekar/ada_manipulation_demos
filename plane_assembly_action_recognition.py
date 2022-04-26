@@ -89,6 +89,7 @@ last_long_bolt_state = False
 long_bolt_counter = 0
 long_bolt_off_counter = 0.0
 insert_long_bolt_count = 0
+screw_long_bolt_action_added = 0
 screw_long_bolt_count = 0
 took_all_long_bolt_left = False
 
@@ -166,13 +167,14 @@ parts_list = {"21": "long bolts",
 # //EDIT: add action: Screw one propeller & Screw all propeller; delete part 20 from combo
 # if 20 is detected for a while then it means one propeller has been taken. it will be gone because the robot would take it back
 # 19 is probably empty propeller blade container
+# 28 - 1 tag flipped when one screw long bolt is done, total 4
 
 actions_list = [Action([0], 'Insert main wing', [[0, 1]]), #near tag 1
                Action([2], 'Insert bolt in main wing', [[0, 1]]), #near tag 1
-               Action([4], 'Screw bolt to main wing', [[0, 1, 27, 17]]), #near tag 1
+               Action([4], 'Screw bolt to main wing', [[0, 1, 17]]), #near tag 1  # not being used, used counter of the tag instead
                Action([1], 'Insert tail wing', [[0, 2]]), #near tag 2
                Action([3], 'Insert bolt in tail wing', [[0, 2, 30]]), #near tag 2
-               Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 9]]), #near tag 2
+               Action([5], 'Screw bolt to tail wing', [[0, 2, 30, 17, 27]]), #near tag 2   # delete 27?
                Action([6], 'Screw one propellers', [[5, 17]]), #x4 # 17: empty tool
                Action([7], 'Fix propeller hub', [[0, 5, 16, 24]])
                ]
@@ -231,6 +233,8 @@ def detect_apriltag(gray, image, state):
     # print(ids)
 
     #//Edit: Need to add special process for tag 19 (empty propeller blade box) and 20(propeller blade)
+    screw_long_bolt_count = 0
+
     for r in results:
         # if detected propeller
         if r.tag_id == 20:
@@ -271,8 +275,11 @@ def detect_apriltag(gray, image, state):
             took_all_short_bolt_left = True 
 
         elif r.tag_id == 27:
-            if insert_long_bolt_count > screw_long_bolt_count and not 27 in part_set:
+            if not 27 in part_set:
                 part_set.add(27)
+
+        elif r.tag_id == 28:
+            screw_long_bolt_count += 1
 
         # AprilTag state
         elif r.tag_id > 32:
@@ -388,7 +395,7 @@ def detect_apriltag(gray, image, state):
 
 def video_demo():
     global propeller_done, detect_propeller_action, last_propeller_state, propeller_count, screw_propeller_action_count
-    global last_long_bolt_state, long_bolt_counter, insert_long_bolt_count, screw_long_bolt_count, took_all_long_bolt_left
+    global last_long_bolt_state, long_bolt_counter, insert_long_bolt_count, screw_long_bolt_count, took_all_long_bolt_left, screw_long_bolt_action_added
     global detect_short_bolt_action, last_short_bolt_state, short_bolt_counter, took_all_short_bolt_left
     global detect_tool, detect_empty_tool, last_empty_tool, tool_off_counter
 
@@ -463,16 +470,18 @@ def video_demo():
 
             elif action.id[0] == 4:
                 # screw long bolt
-                if action.has_parts(part_set):
-                    if long_bolt_counter < 5 and insert_long_bolt_count > screw_long_bolt_count:
-                        action_sequence += action.id
-                        legible_action_sequence += action.name + ", "
-                        screw_long_bolt_count += 1
-                        print("Add Screw Long bolt actions")
-                        part_set.remove(27)
-                    if screw_long_bolt_count == 4:
-                        undone_actions.remove(action)
-                        print("Screw Long bolt done")
+                while screw_long_bolt_action_added < screw_long_bolt_count and insert_long_bolt_count >= screw_long_bolt_count:
+                    # if detected more tags then the number of screw long bolt action added, add more screw action
+                    action_sequence += action.id 
+                    legible_action_sequence += action.name + ", "
+                    screw_long_bolt_action_added += 1
+                    print("Add Screw Long bolt actions")
+
+                if screw_long_bolt_action_added == 4:
+                    # remove screw long bolt from undone action list if it has been added 4 times
+                    undone_actions.remove(action)
+                    print("Screw Long bolt done")
+
             elif action.has_parts(part_set):
                 #print(action.id)
                 action_sequence += action.id
@@ -493,6 +502,7 @@ def video_demo():
         line_length = 160
         start_index = 0
         start_height = 75
+        # display the whole text by adding more space when needed
         while start_index < len(display_text):
             end_index =  len(display_text) if start_index+line_length > len(display_text) else start_index+line_length
             cv2.putText(image, display_text[start_index:end_index], (5, start_height), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
