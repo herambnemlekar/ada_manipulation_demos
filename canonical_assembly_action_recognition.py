@@ -78,6 +78,8 @@ import numpy as np
 
 txt_dir = "./"
 
+tool_detected = False
+
 
 class Action:
     def __init__(self, id = -1, name='', parts_combo = []):
@@ -114,10 +116,11 @@ parts_list = {"18": "tool",
               "30": "long wire",
               }
 
+# TODO: add flipped tags here
 actions_list = [Action([0], 'Insert long bolt', [[25, 21]]),
-               Action([3], 'Screw long bolt', [[18, 25, 21]]),
+               Action([3], 'Screw long bolt', [[18, 25, 21, 16]]),
                Action([1], 'Insert short bolt', [[26, 22]]),
-               Action([4], 'Screw short bolt', [[18, 26, 22]]),
+               Action([4], 'Screw short bolt', [[18, 26, 22, 15]]),
                Action([2], 'Insert short wire', [[26, 24]]),
                Action([5], 'Insert long wire', [[25, 30]]),
                ]
@@ -135,7 +138,7 @@ part_set = set()
 
 
 def detect_apriltag(gray, image, state):
-    global performed_actions, part_set, action_sequence
+    global performed_actions, part_set, action_sequence, tool_detected
     
     ifRecord = False
 
@@ -156,6 +159,8 @@ def detect_apriltag(gray, image, state):
     # loop over the AprilTag detection results
     for r in results:
         # AprilTag state
+        if (r.tag_id == 18 or r.tag_id == 17) and tool_detected==False:
+            tool_detected = True
         if r.tag_id > 32:
             print("tag id:",r.tag_id)
             continue
@@ -206,7 +211,7 @@ def detect_apriltag(gray, image, state):
 
 
 def video_demo():
-
+    global tool_detected
 
     # publisher
     ros_pub = rospy.Publisher("/april_tag_detection", Float64MultiArray, queue_size=1)
@@ -371,12 +376,60 @@ def video_demo():
         #     print("state change!!")
         #     f.flush()
 
+        # if not tool_detected:
+        #     for action in undone_actions:
+        #         if action.has_parts(part_set):
+        #             action_sequence += action.id
+        #             legible_action_sequence += action.name + ", "
+        #             undone_actions.remove(action)
+        # else:
+        #     possible_action_list = []
+        #     possible_actions = {}
+        #     possible_action_prompt = ""
+        #     for action in undone_actions:
+        #         if action.has_parts(part_set):
+        #             if action.id in [[3],[4]]:
+        #                 possible_action_list += action.id
+        #                 possible_action_prompt += action.name + ": " + str(action.id[0]) + ", "
+        #                 possible_actions[action.id[0]] = action
+        #             else:
+        #                 action_sequence += action.id
+        #                 legible_action_sequence += action.name + ", "
+        #                 undone_actions.remove(action)
+
+        #     if len(possible_action_list) > 1:
+        #         print("Possible Actions: "+ possible_action_prompt[:-2])
+
+        #         while len(possible_action_list) > 0:
+        #             while True:
+        #                 try:
+        #                     user_input_id = int(input("Please enter each action id from the possible action list in the order that you just performed: "))
+        #                     break
+        #                 except ValueError:
+        #                     print("That was no valid number. Please try again...")
+        #             if user_input_id in possible_action_list:
+        #                 possible_action_list.remove(user_input_id)
+        #                 action = possible_actions[user_input_id]
+        #                 action_sequence += action.id
+        #                 legible_action_sequence += action.name + ", "
+        #                 undone_actions.remove(action)
+        #             else:
+        #                 print("The action id you input was not in the possible action list. Please try again...")
+        #         print("All done. Thank you!")
+
+        #     else:
+        #         for action in undone_actions:
+        #             if action.has_parts(part_set):
+        #                 action_sequence += action.id
+        #                 legible_action_sequence += action.name + ", "
+        #                 undone_actions.remove(action)
+            # tool_detected = False
+
         for action in undone_actions:
             if action.has_parts(part_set):
                 action_sequence += action.id
                 legible_action_sequence += action.name + ", "
                 undone_actions.remove(action)
-        
 
         legible_part_list = ""
         for part_id in part_set:

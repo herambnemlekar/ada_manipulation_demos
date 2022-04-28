@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import pdb
 import sys
 import time
@@ -17,83 +18,17 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
+import common
+
 
 # set to False if operating real robot
 IS_SIM = False
 
+# directory path for each machine
+directory_syspath = "/home/icaros/ros_ws/src/ada_manipulation_demos"
 
-def createBwMatrixforTSR():
-    """
-    Creates the bounds matrix for the TSR.
-    :returns: A 6x2 array Bw
-    """
-    Bw = np.zeros([6, 2])
-    Bw[0, 0] = -0.005
-    Bw[0, 1] = 0.005
-    Bw[1, 0] = -0.005
-    Bw[1, 1] = 0.005
-    Bw[2, 0] = -0.005
-    Bw[2, 1] = 0.005
-    Bw[3, 0] = -0.005
-    Bw[3, 1] = 0.005
-    Bw[4, 0] = -0.005
-    Bw[4, 1] = 0.005
-    Bw[5, 0] = -0.005
-    Bw[5, 1] = 0.005
-
-    return Bw
-
-
-def createTSR(partPose, graspPose):
-    """
-    Create the TSR for grasping a soda can.
-    :param partPose: SE(3) transform from world to part.
-    :param adaHand: ADA hand object
-    :returns: A fully initialized TSR.  
-    """
-
-    # set the part TSR at the part pose
-    partTSR = adapy.get_default_TSR()
-    T0_w = partTSR.get_T0_w()
-    T0_w[0:3, 3] = partPose[:3]
-    partTSR.set_T0_w(T0_w)
-
-    # set the transformed TSR
-    partTSR.set_Tw_e(graspPose)
-    Bw = createBwMatrixforTSR()
-    partTSR.set_Bw(Bw)
-
-    return partTSR
-
-
-def transition(s_from, a):
-    # preconditions
-    if a in [0, 1] and s_from[a] < 1:
-        p = 1.0
-    elif a == 2 and s_from[a] < 4 and s_from[0] == 1:
-        p = 1.0
-    elif a == 3 and s_from[a] < 1 and s_from[1] == 1:
-        p = 1.0
-    elif a == 4 and s_from[a] < 4 and s_from[a] + 1 <= s_from[a - 2]:
-        p = 1.0
-    elif a == 5 and s_from[a] < 1 and s_from[a] + 1 <= s_from[a - 2]:
-        p = 1.0
-    elif a == 6 and s_from[a] < 4:
-        p = 1.0
-    elif a == 7 and s_from[a] < 1 and s_from[a - 1] == 4:
-        p = 1.0
-    else:
-        p = 0.0
-
-    # transition to next state
-    if p == 1.0:
-        s_to = deepcopy(s_from)
-        s_to[a] += 1
-        s_to[-1] = s_from[-2]
-        s_to[-2] = a
-        return p, s_to
-    else:
-        return p, None
+# urdf files path 
+urdf_filepath = "package://ada_manipulation_demos/urdf_collection"
 
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
@@ -109,26 +44,26 @@ class AssemblyController(QMainWindow):
         # ------------------------------------------ Create sim environment ---------------------------------------------- #
 
         # objects in airplane assembly
-        storageURDFUri = "package://assembly_demos/urdf_collection/storage.urdf"
+        storageURDFUri = urdf_filepath + "/storage.urdf"
         storagePose = [0., -0.3, -0.77, 0, 0, 0, 0]
 
-        wingURDFUri = "package://assembly_demos/urdf_collection/abstract_main_wing.urdf"
+        wingURDFUri = urdf_filepath + "/abstract_main_wing.urdf"
         wingPose = [0.75, -0.3, 0., 0.5, 0.5, 0.5, 0.5]
 
-        tailURDFUri = "package://assembly_demos/urdf_collection/abstract_tail_wing.urdf"
+        tailURDFUri = urdf_filepath + "/abstract_tail_wing.urdf"
         tailPose = [-0.7, -0.25, 0.088, 0.5, 0.5, 0.5, 0.5]
 
-        container1URDFUri = "package://assembly_demos/urdf_collection/container_1.urdf"
+        container1URDFUri = urdf_filepath + "/container_1.urdf"
         container1_1Pose = [0.4, -0.4, 0., 0., 0., 0., 0.]
         container1_2Pose = [-0.4, -0.4, 0., 0., 0., 0., 0.]
         container1_3Pose = [0.55, -0.3, 0., 0., 0., 0., 0.]
         container1_4Pose = [-0.55, -0.3, 0., 0., 0., 0., 0.]
 
-        container2URDFUri = "package://assembly_demos/urdf_collection/container_2.urdf"
+        container2URDFUri = urdf_filepath + "/container_2.urdf"
         container2_1Pose = [0.4, -0.1, 0, 0., 0., 0., 0.]
         container2_2Pose = [-0.4, -0.1, 0., 0., 0., 0., 0.]
         
-        container3URDFUri = "package://assembly_demos/urdf_collection/container_3.urdf"
+        container3URDFUri = urdf_filepath + "/container_3.urdf"
         container3_1Pose = [0.6, 0., 0., 0., 0., 0., 0.]
         container3_2Pose = [-0.6, 0., 0., 0., 0, 0, 0]
 
@@ -144,9 +79,11 @@ class AssemblyController(QMainWindow):
 
         # hard-coded grasps
         self.graspConfig, self.deliveryRotation = {}, {}
-        self.graspConfig["long bolts"] = [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
+        self.graspConfig["long bolts"] = [-2.06624655,  4.37198852,  2.3886246,  -2.84061763,  4.90123373, -6.59571791]
+        # [-2.11464507,  4.27069802,  2.12562682, -2.9179622, -1.1927828, -0.16230427]
         self.deliveryRotation["long bolts"] = -1.34
-        self.graspConfig["short bolts"] = [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
+        self.graspConfig["short bolts"] = [ -7.07682948,   4.45124074,   2.65111774,  -2.60687012,  17.12044212, -11.50343272]
+        # [-0.72561783, 4.31588712, 2.28856202, -2.71514972, -1.42200445, 1.01089267]
         self.deliveryRotation["short bolts"] = 1.25
         self.graspConfig["propeller nut"] = [0.49700125, 1.86043184, 3.78425230, 2.63384048, 1.44808279, 1.67817618]
         # self.graspConfig["propeller nut"] = [-2.03877631, 4.09967790, 1.60438025, -0.19636232, 0.71718155, 2.21799853]
@@ -244,7 +181,7 @@ class AssemblyController(QMainWindow):
 
         # task info
         assembly_image = QLabel(self)
-        pixmap = QPixmap("src/actual_task.jpg")
+        pixmap = QPixmap(directory_syspath + "/src/actual_task.jpg")
         pixmap = pixmap.scaledToWidth(1125)
         assembly_image.setPixmap(pixmap)
         assembly_image.adjustSize()
@@ -398,7 +335,7 @@ class AssemblyController(QMainWindow):
                     objGraspPose = self.objects[chosen_obj][2]
                     
                     # grasp TSR for object
-                    objTSR = createTSR(objPose, objGraspPose)
+                    objTSR = common.createTSR(objPose, objGraspPose)
                     # marker = viewer.add_tsr_marker(objTSR)
                     # input("Marker look good?")
 
