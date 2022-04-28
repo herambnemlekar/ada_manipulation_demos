@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import pdb
 import sys
 import time
@@ -18,7 +17,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-import common
+from src import common
 
 
 # set to False if operating real robot
