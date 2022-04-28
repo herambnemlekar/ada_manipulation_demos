@@ -156,14 +156,14 @@ class AssemblyController(QMainWindow):
         tailWing = self.world.add_body_from_urdf(tailURDFUri, tailPose)
 
         # dict of all objects
-        self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset],
-                        "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset],
-                        "short wire": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset],
-                        "long wire": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset],
-                        "small box": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset],
-                        "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset],
+        self.objects = {"long bolts": [container1_1, container1_1Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
+                        "short bolts": [container1_2, container1_2Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
+                        "short wire": [container1_3, container1_3Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
+                        "long wire": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
+                        "small box": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
+                        "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
                         # "propeller hub": [container3_1, container3_1Pose, container3GraspPose, container3GraspOffset],
-                        "large box": [tailWing, tailPose, tailGraspPose, tailGraspOffset]}
+                        "large box": [tailWing, tailPose, tailGraspPose, tailGraspOffset, tailURDFUri]}
 
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
 
@@ -182,8 +182,7 @@ class AssemblyController(QMainWindow):
             self.ada.start_trajectory_controllers() 
 
         self.armHome = [-1.57, 3.14, 1.23, -2.19, 1.8, 1.2]
-        waypoints = [(0.0, self.arm_skeleton.get_positions()), (1.0, self.armHome)]
-        trajectory = self.ada.compute_joint_space_path(waypoints)  # self.ada.plan_to_configuration(self.armHome)
+        trajectory = self.ada.plan_to_configuration(self.armHome, self.ada.get_world_collision_constraint())
         self.ada.execute_trajectory(trajectory)
         self.hand.execute_preshape([0.15, 0.15])
       
@@ -389,8 +388,18 @@ class AssemblyController(QMainWindow):
                     grasp_configuration = configurations[0]
 
                 # plan path to grasp configuration
-                waypoints = [(0.0, self.armHome),(1.0, grasp_configuration)]
-                trajectory = self.ada.compute_joint_space_path(waypoints)
+                # waypoints = [(0.0, self.armHome),(1.0, grasp_configuration)]
+                # trajectory = self.ada.compute_joint_space_path(waypoints)
+
+                # remove object to grasp from collision check
+                self.world.remove_skeleton(obj)
+
+                # plan path to grasp configuration with world collision check
+                trajectory = self.ada.plan_to_configuration(grasp_configuration, self.ada.get_world_collision_constraint())
+
+                # add object urdf back to world and update obj pointer
+                self.objects[chosen_obj][0] = self.world.add_body_from_urdf(self.objects[chosen_obj][4], self.objects[chosen_obj][1])
+                obj = self.objects[chosen_obj][0]
 
 
                 # ------------------------------------------ Execute path to grasp object --------------------------------- #
