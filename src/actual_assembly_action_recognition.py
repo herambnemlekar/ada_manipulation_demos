@@ -268,10 +268,10 @@ def detect_apriltag(gray, image, state):
             if not 17 in part_set:
                 part_set.add(17)
             
-        elif r.tag_id == 25:
+        elif r.tag_id == 9: #9
             took_all_long_bolt_left = True 
 
-        elif r.tag_id == 26:
+        elif r.tag_id == 10: #10
             took_all_short_bolt_left = True 
 
         elif r.tag_id == 27:
@@ -350,7 +350,9 @@ def detect_apriltag(gray, image, state):
             starttime_long_bolts = time.time()
         if long_bolts_detected == False and last_long_bolt_state == False:
             long_bolt_off_counter = time.time() - starttime_long_bolts
-    elif long_bolt_counter < 4 and took_all_long_bolt_left and not 21 in part_set:
+    elif took_all_long_bolt_left and not 21 in part_set:
+        print("add all long bolts")
+        long_bolt_counter = 4
         part_set.add(21)
 
 
@@ -366,7 +368,7 @@ def detect_apriltag(gray, image, state):
             starttime_short_bolts = time.time()
         if short_bolts_detected == False and last_short_bolt_state == False:
             short_bolt_off_counter = time.time() - starttime_short_bolts
-    elif short_bolt_counter < 4 and took_all_short_bolt_left and not 22 in part_set:
+    elif took_all_short_bolt_left and not 22 in part_set:
         print("add all short bolts")
         short_bolt_counter = 4
         part_set.add(22)
