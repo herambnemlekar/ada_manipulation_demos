@@ -19,6 +19,8 @@ from PyQt5.QtCore import *
 
 import common
 from collections import OrderedDict
+from vi import value_iteration
+from irl import get_trajectories, rollout_trajectory, boltzman_likelihood
 
 
 # set to False if operating real robot
@@ -29,7 +31,6 @@ directory_syspath = "/home/icaros/ros_ws/src/ada_manipulation_demos"
 
 # urdf files path 
 urdf_filepath = "package://ada_manipulation_demos/urdfs"
-
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
 
@@ -211,8 +212,16 @@ class AssemblyController(QMainWindow):
         self.qf = pickle.load(open(directory_syspath + "/data/q_values_" + user_id + ".p", "rb"))
         self.states = pickle.load(open(directory_syspath + "/data/states_" + user_id + ".p", "rb"))
 
+        ###
+        # load the variables for computing weights
+        #self.weights = np.array(pickle.load(open(directory_syspath + "/data/weights_" + user_id + ".p", "rb")))
+        #self.terminal_states = pickle.load(open(directory_syspath + "/data/terminal_states.p", "rb"))
+        #self.features = np.array(pickle.load(open(directory_syspath + "/data/features_" + user_id + ".p", "rb")))
+        #self.all_complex_trajectories = pickle.load(open("data/complex_trajectories.csv", "rb"))
+
         # actions in airplane assembly and objects required for each action
-        self.remaining_user_actions = [0, 1, 2, 3, 4, 5, 6, 7]
+        self.all_user_actions = [0, 1, 2, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 6, 6, 6, 7]
+        self.remaining_user_actions = [0, 1, 2, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 6, 6, 6, 7]
         self.action_names = ["insert main wing",
                              "insert tail wing",
                              "insert long bolts",
@@ -240,6 +249,9 @@ class AssemblyController(QMainWindow):
         # initialize user sequence
         self.time_step = 0
         self.user_sequence = []
+        self.anticipated_actions = []
+        self.available_actions = []
+        self.current_state = self.states[0]
         self.anticipated_action_names = []
         self.suggested_objects = []
 
@@ -352,6 +364,10 @@ class AssemblyController(QMainWindow):
         self.timer.start(self.time_to_respond*1000) 
         self.countdown_timer.start(1000)
 
+        self.new_features = []
+        self.current_available_features = []
+        self.feature_buttons = {}
+        self.setNewFeature = False
 
     def timer_update(self): 
         self.time_left -=1
@@ -360,6 +376,11 @@ class AssemblyController(QMainWindow):
             self.time_left = deepcopy(self.time_to_respond)
             self.countdown.setText(str(self.time_left))
 
+    def featureButtonCallback(self):
+        self.new_features = []
+        for f in self.current_available_features:
+            if f in self.feature_buttons.keys() and self.feature_buttons[f].isChecked():
+                self.new_features.append(f)
 
     def update_application(self):
 
@@ -385,37 +406,49 @@ class AssemblyController(QMainWindow):
         # update action buttons
         self.suggested_button.setChecked(False)
         self.selected_button.setChecked(False)
-        
-        
-    def callback(self, data):
 
-        # current recognised action sequence
-        detected_sequence = [int(a) for a in data.data]
+        # pop up new feature window if self.setNewFeature is True
+        if self.setNewFeature:
 
-        # current recognised parts
-        detected_parts = data.layout.dim[0].label.split(",")
+            self.new_features = []
+            self.current_available_features = ["dummie A","dummie B","dummie C"]
+            msg = QMessageBox()
+            msg.setStyleSheet("QLabel{min-width: 800px;}");
+            msg.setStyleSheet("QLabel{min-height: 200px;}")
+
+            msg.setText("Please select new features to add.")
+            option_x = 30
+            option_y = 150
+            for f in self.current_available_features:
+                opt_button = QPushButton(f, msg)
+                opt_button.setCheckable(True)
+                self.feature_buttons[f] = opt_button
+                self.feature_buttons[f].setGeometry(option_x, option_y, 80, 30)
+                self.feature_buttons[f].setFont(QFont('Arial', 13))
+                option_x += 100
+                self.feature_buttons[f].clicked.connect(self.featureButtonCallback)
             
-        # update action sequence
-        self.user_sequence = detected_sequence
-        self.time_step = len(self.user_sequence)
+            msg.addButton(QMessageBox.Ok)
+            msg.addButton(QMessageBox.Cancel)
 
-        # determine current state based on detected action sequence
-        current_state = self.states[0]
-        for user_action in self.user_sequence:
-            # for i in range(self.action_counts[user_action]):
-            p, next_state = common.transition(current_state, user_action)
-            current_state = next_state
+            msg.setFont(QFont('Arial', 20))
+            msg.setWindowTitle("Robot Message")  
+            #QTimer.singleShot(4000, msg.close) 
 
-        # update remaining parts
-        self.remaining_objects = [rem_obj for rem_obj in list(self.objects.keys()) if rem_obj not in detected_parts] 
-        # self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]
+            ret = msg.exec_()
+            if ret == QMessageBox.Cancel:
+                self.new_features = []
 
-        # ---------------------------------------- Anticipate next user action --------------------------------------- #
+            print(self.new_features)
+            self.setNewFeature = False
+
+    def calculate_anticipated_action(self, current_state, remaining_user_actions):
+        # Anticipate next user action    
         sensitivity = 0.0
         max_action_val = -np.inf
         available_actions, anticipated_actions = [], []
         
-        for a in self.remaining_user_actions:
+        for a in remaining_user_actions:
             s_idx = self.states.index(current_state)
             p, next_state = common.transition(current_state, a)
             
@@ -431,12 +464,125 @@ class AssemblyController(QMainWindow):
                     anticipated_actions.append(a)
                     max_action_val = self.qf[s_idx][a]
 
+        return available_actions, anticipated_actions
+        
+        
+    def callback(self, data):
+        # current recognised action sequence
+        detected_sequence = [int(a) for a in data.data]
+
+        # current recognised parts
+        detected_parts = data.layout.dim[0].label.split(",")
+
+        # update remaining parts
+        self.remaining_objects = [rem_obj for rem_obj in list(self.objects.keys()) if rem_obj not in detected_parts] 
+        # self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]
+
+        # get values from last time step
+        current_state = self.current_state
+
+        # if in the beginning of the program there is no prediction yet, update remaining user action according to user action detected
+        if len(self.anticipated_actions)==0:
+            for x in self.user_sequence:
+                self.remaining_user_actions.remove(x)
+
+        ###
+        FLAG = False
+
+        # compare self.user_sequence and detected_sequence to check for any newly added actions
+        new_detected_sequence = []
+        if len(detected_sequence) > len(self.user_sequence) and len(self.anticipated_actions) > 0:            
+            new_detected_sequence = detected_sequence[len(self.user_sequence):]
+
+        # check newly detected actions one by one with last anticipated_actions
+        count = 0
+        for new_a in new_detected_sequence:
+            count += 1
+            if not self.anticipated_actions[0] == new_a:
+                if FLAG:
+                    # if different and the mismatch is due to weights need updating, update weights
+                    #prev_weights = deepcopy(self.weights)
+                    p, sp = common.transition(current_state, new_a)
+
+                    future_actions = deepcopy(self.remaining_user_actions)
+                    future_actions.remove(new_a)
+                    ro = rollout_trajectory(self.qf, self.states, common.transition, future_actions, self.states.index(sp))
+                    future_actions.append(new_a)
+                    complex_user_demo = [detected_sequence[:step] + [new_a] + ro]
+                    complex_trajectories = get_trajectories(self.states, complex_user_demo, common.transition)
+                    
+                    n_samples = 10
+                    weight_priors = np.ones(n_samples)/n_samples
+                    new_samples = []
+                    posterior = []
+                    for n_sample in range(n_samples):
+                        u = np.random.uniform(0., 1., 3) # dim(features) = dim(weights.T)
+                        d = 1.0  # np.sum(u)  # np.sum(u ** 2) ** 0.5
+                        complex_weights = u / d
+                        likelihood_all_trajectories, _ = boltzman_likelihood(self.features, self.all_complex_trajectories, complex_weights)
+                        likelihood_user_demo, r = boltzman_likelihood(self.features, complex_trajectories, complex_weights)
+                        likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_trajectories)
+                        bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
+
+                        new_samples.append(complex_weights)
+                        posterior.append(bayesian_update)
+
+                    posterior = list(posterior / np.sum(posterior))
+                    max_posterior = max(posterior)
+                    self.weights = new_samples[posterior.index(max_posterior)]
+                    #print("Updated weights from", prev_weights, "to", self.weights)
+
+                    # compute new q values from new weights
+                    rewards = self.features.dot(self.weights)
+                    self.qf, _, _ = value_iteration(self.states, self.remaining_user_actions, common.transition, rewards, self.terminal_states)
+
+                else:
+                    # is mismatch is due to new features, add pop up window to ask the user about which feature to add
+                    self.setNewFeature = True
+
+                    while self.setNewFeature:
+                        placeholder = 1
+
+                    # update q values
+                    print(self.new_features)
+
+
+                # for each iteration 
+                # determine current state based on detected action sequence
+                current_state = self.states[0]
+                for user_action in self.user_sequence + new_detected_sequence[0:count]:
+                    # for i in range(self.action_counts[user_action]):
+                    p, next_state = common.transition(current_state, user_action)
+                    current_state = next_state
+
+                self.remaining_user_actions.remove(new_a)
+
+                # ---------------------------------------- Anticipate next user action --------------------------------------- #
+                self.available_actions, self.anticipated_actions = self.calculate_anticipated_action(current_state, self.remaining_user_actions)
+
+        # ------------------------------------ Anticipate next user action with new weights ------------------------------------ #
+
+        # update action sequence
+        self.user_sequence = detected_sequence
+        self.time_step = len(self.user_sequence)
+
+        # update new time steps
+        current_state = self.states[0]
+        for user_action in self.user_sequence:
+            # for i in range(self.action_counts[user_action]):
+            p, next_state = common.transition(current_state, user_action)
+            current_state = next_state
+        self.current_state = current_state
+
+        self.available_actions, self.anticipated_actions = self.calculate_anticipated_action(self.current_state, self.remaining_user_actions)
+
+        
         # determine the legible names of the anticipated actions
-        self.anticipated_action_names = [self.action_names[a] for a in anticipated_actions]
+        self.anticipated_action_names = [self.action_names[a] for a in self.anticipated_actions]
 
         # determine objects required for anticipated actions
         suggested_objs = []
-        for a in anticipated_actions:
+        for a in self.anticipated_actions:
             suggested_objs += [obj for obj in self.required_objects[a] if obj in self.remaining_objects]
         suggested_objs = list(OrderedDict.fromkeys(suggested_objs))
 
@@ -447,7 +593,6 @@ class AssemblyController(QMainWindow):
                 # self.ada.execute_trajectory(trajectory)
 
             self.suggested_objects = deepcopy(suggested_objs)
-
 
     def reach_part(self, chosen_obj, midpoint=False):
         if chosen_obj not in ["airplane body", "none"]:
@@ -537,6 +682,7 @@ class AssemblyController(QMainWindow):
                 msg.setWindowTitle("Robot Message")
                 QTimer.singleShot(4000, msg.close)    
                 msg.exec_()
+
             else:
                 # deliver parts requested by the user whenever possible
                 print("Providing the required part.")

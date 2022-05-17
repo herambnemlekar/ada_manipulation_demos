@@ -27,7 +27,7 @@ IS_SIM = False
 directory_syspath = "/home/icaros/ros_ws/src/ada_manipulation_demos"
 
 # urdf files path 
-urdf_filepath = "package://ada_manipulation_demos/urdf_collection"
+urdf_filepath = "package://ada_manipulation_demos/urdfs"
 
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
@@ -215,7 +215,7 @@ class AssemblyController(QMainWindow):
 
         # task info
         assembly_image = QLabel(self)
-        pixmap = QPixmap(directory_syspath + "/src/canonical_task.png")
+        pixmap = QPixmap(directory_syspath + "/media/canonical_task.png")
         pixmap = pixmap.scaledToWidth(1125)
         assembly_image.setPixmap(pixmap)
         assembly_image.adjustSize()
