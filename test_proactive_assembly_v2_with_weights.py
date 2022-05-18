@@ -494,7 +494,7 @@ class AssemblyController(QMainWindow):
             self.time_step = len(self.user_sequence)
             for x in self.user_sequence:
                 self.remaining_user_actions.remove(x)
-                print(self.states[430])
+                #print(self.states[430])
         
 
 
@@ -516,10 +516,10 @@ class AssemblyController(QMainWindow):
                 future_actions = deepcopy(self.remaining_user_actions)
                 future_actions.remove(new_a)
                 print(self.states.index(sp))
-                ro = rollout_trajectory(self.qf, self.states, common.canonical_transition, future_actions, self.states.index(sp))
+                ro = rollout_trajectory(self.qf, self.states, common.transition, future_actions, self.states.index(sp))
                 future_actions.append(new_a)
                 complex_user_demo = [detected_sequence[:self.time_step + count] + [new_a] + ro]
-                complex_trajectories = get_trajectories(self.states, complex_user_demo, common.canonical_transition)
+                complex_trajectories = get_trajectories(self.states, complex_user_demo, common.transition)
                 
                 # # Bayesian approach
                 # n_samples = 10

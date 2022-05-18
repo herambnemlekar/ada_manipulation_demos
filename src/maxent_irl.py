@@ -234,7 +234,7 @@ def rollout_trajectory(qf, states, transition_function, remaining_actions, start
     available_actions = deepcopy(remaining_actions)
     generated_sequence = []
     while len(available_actions) > 0:
-        print(s, available_actions)
+        #print(s, available_actions)
         max_action_val = -np.inf
         candidates = []
         for a in available_actions:
