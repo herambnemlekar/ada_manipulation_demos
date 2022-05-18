@@ -179,7 +179,7 @@ class AssemblyController(QMainWindow):
                         "tail screw": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
                         "propeller blades": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
-                        "main wing": [mainWing, wingURDFUri],
+                        "main wing": [mainWing, wingPose, 0,0, wingURDFUri],
                         "airplane body": []}
                         
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
@@ -613,7 +613,6 @@ class AssemblyController(QMainWindow):
                         self.hand.execute_preshape([0.15, 0.15])
                         # self.world.remove_skeleton(obj)
                     else:
-                        # hold the grasped object and wait for user to grab one propeller blade
                         if chosen_obj == "tool":
                             # hold tool box until user picks up tool and put tool back
                             while("tool" in self.remaining_objects):

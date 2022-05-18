@@ -315,7 +315,7 @@ class AssemblyController(QMainWindow):
         self.time_step = len(self.user_sequence)
 
         # update remaining parts
-        self.remaining_objects = [rem_obj for rem_obj in self.remaining_objects if rem_obj not in detected_parts]        
+        self.remaining_objects = [rem_obj for rem_obj in list(self.objects.keys()) if rem_obj not in detected_parts]        
 
 
     def deliver_part(self):
@@ -492,7 +492,18 @@ class AssemblyController(QMainWindow):
                 else:
                 # ------------------- Move Container back to original place if not boxes------------------- #
                     # wait for user to grab item
-                    time.sleep(3)
+                    if chosen_obj == "tool":
+                        # hold tool box until user picks up tool and put tool back
+                        while("tool" in self.remaining_objects):
+                            time.sleep(0.1)
+                        print("picked up tool")
+                        time.sleep(0.5)
+                        while ("tool" not in self.remaining_objects):
+                            time.sleep(0.5)
+                            print("tool is out")
+                        print("tool put back")
+                    else:
+                        time.sleep(3)
 
                     if chosen_obj in ["long bolts", "short bolts", "long wire"]:
                         #print("smoothier turn")

@@ -408,7 +408,7 @@ def video_demo():
 
     ground_truth_action_sequence = [1,7,8,2,5,6]
 
-    capture = cv2.VideoCapture(0)
+    capture = cv2.VideoCapture(-1)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     # capture.set(cv2.CAP_PROP_POS_FRAMES,6000)

@@ -19,8 +19,11 @@ from PyQt5.QtCore import *
 
 import common
 from collections import OrderedDict
-from vi import value_iteration
-from irl import get_trajectories, rollout_trajectory, boltzman_likelihood
+from src.vi import value_iteration
+import src.optimizer as O  # stochastic gradient descent optimizer
+from src.maxent_irl import *
+from src.assembly_tasks import *
+from src.import_qualtrics import get_qualtrics_survey
 
 
 # set to False if operating real robot
@@ -180,7 +183,7 @@ class AssemblyController(QMainWindow):
                         "tail screw": [container1_4, container1_4Pose, container1GraspPose, container1GraspOffset, container1URDFUri],
                         "propeller blades": [container2_1, container2_1Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
                         "tool": [container2_2, container2_2Pose, container2GraspPose, container2GraspOffset, container2URDFUri],
-                        "main wing": [mainWing, wingURDFUri],
+                        "main wing": [mainWing, wingPose, 0,0, wingURDFUri],
                         "airplane body": []}
                         
         # ------------------------------------------------ Get robot config ---------------------------------------------- #
@@ -214,10 +217,9 @@ class AssemblyController(QMainWindow):
 
         ###
         # load the variables for computing weights
-        #self.weights = np.array(pickle.load(open(directory_syspath + "/data/weights_" + user_id + ".p", "rb")))
-        #self.terminal_states = pickle.load(open(directory_syspath + "/data/terminal_states.p", "rb"))
-        #self.features = np.array(pickle.load(open(directory_syspath + "/data/features_" + user_id + ".p", "rb")))
-        #self.all_complex_trajectories = pickle.load(open("data/complex_trajectories.csv", "rb"))
+        self.weights = np.array(pickle.load(open(directory_syspath + "/data/weights_" + user_id + ".p", "rb")))
+        self.features = np.array(pickle.load(open(directory_syspath + "/data/features_" + user_id + ".p", "rb")))
+        self.task = np.array(pickle.load(open(directory_syspath + "/data/task_" + user_id + ".p", "rb")))
 
         # actions in airplane assembly and objects required for each action
         self.all_user_actions = [0, 1, 2, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 6, 6, 6, 7]
@@ -242,6 +244,10 @@ class AssemblyController(QMainWindow):
         
         # objects yet to be delivered
         self.remaining_objects = list(self.objects.keys())
+
+        # irl parameters
+        self.init = O.Constant(0.5)
+        self.optim = O.ExpSga(lr=O.linear_decay(lr0=0.5))
 
         # subscribe to action recognition
         sub_act = rospy.Subscriber("/april_tag_detection", Float64MultiArray, self.callback, queue_size=1)
@@ -439,7 +445,7 @@ class AssemblyController(QMainWindow):
             if ret == QMessageBox.Cancel:
                 self.new_features = []
 
-            print(self.new_features)
+            #print(self.new_features)
             self.setNewFeature = False
 
     def calculate_anticipated_action(self, current_state, remaining_user_actions):
@@ -482,12 +488,18 @@ class AssemblyController(QMainWindow):
         current_state = self.current_state
 
         # if in the beginning of the program there is no prediction yet, update remaining user action according to user action detected
-        if len(self.anticipated_actions)==0:
+        if len(self.anticipated_actions)==0 and len(self.user_sequence) == 0:
+            # update action sequence
+            self.user_sequence = detected_sequence
+            self.time_step = len(self.user_sequence)
             for x in self.user_sequence:
                 self.remaining_user_actions.remove(x)
+                print(self.states[430])
+        
+
 
         ###
-        FLAG = False
+        FLAG = True
 
         # compare self.user_sequence and detected_sequence to check for any newly added actions
         new_detected_sequence = []
@@ -495,70 +507,74 @@ class AssemblyController(QMainWindow):
             new_detected_sequence = detected_sequence[len(self.user_sequence):]
 
         # check newly detected actions one by one with last anticipated_actions
-        count = 0
-        for new_a in new_detected_sequence:
-            count += 1
-            if not self.anticipated_actions[0] == new_a:
-                if FLAG:
-                    # if different and the mismatch is due to weights need updating, update weights
-                    #prev_weights = deepcopy(self.weights)
-                    p, sp = common.transition(current_state, new_a)
+        for count, new_a in enumerate(new_detected_sequence):
+            if FLAG:
+                # if different and the mismatch is due to weights need updating, update weights
+                prev_weights = deepcopy(self.weights)
+                p, sp = common.transition(current_state, new_a)
 
-                    future_actions = deepcopy(self.remaining_user_actions)
-                    future_actions.remove(new_a)
-                    ro = rollout_trajectory(self.qf, self.states, common.transition, future_actions, self.states.index(sp))
-                    future_actions.append(new_a)
-                    complex_user_demo = [detected_sequence[:step] + [new_a] + ro]
-                    complex_trajectories = get_trajectories(self.states, complex_user_demo, common.transition)
-                    
-                    n_samples = 10
-                    weight_priors = np.ones(n_samples)/n_samples
-                    new_samples = []
-                    posterior = []
-                    for n_sample in range(n_samples):
-                        u = np.random.uniform(0., 1., 3) # dim(features) = dim(weights.T)
-                        d = 1.0  # np.sum(u)  # np.sum(u ** 2) ** 0.5
-                        complex_weights = u / d
-                        likelihood_all_trajectories, _ = boltzman_likelihood(self.features, self.all_complex_trajectories, complex_weights)
-                        likelihood_user_demo, r = boltzman_likelihood(self.features, complex_trajectories, complex_weights)
-                        likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_trajectories)
-                        bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
+                future_actions = deepcopy(self.remaining_user_actions)
+                future_actions.remove(new_a)
+                print(self.states.index(sp))
+                ro = rollout_trajectory(self.qf, self.states, common.canonical_transition, future_actions, self.states.index(sp))
+                future_actions.append(new_a)
+                complex_user_demo = [detected_sequence[:self.time_step + count] + [new_a] + ro]
+                complex_trajectories = get_trajectories(self.states, complex_user_demo, common.canonical_transition)
+                
+                # # Bayesian approach
+                # n_samples = 10
+                # weight_priors = np.ones(n_samples)/n_samples
+                # new_samples = []
+                # posterior = []
+                # for n_sample in range(n_samples):
+                #     u = np.random.uniform(0., 1., 3) # dim(features) = dim(weights.T)
+                #     d = 1.0  # np.sum(u)  # np.sum(u ** 2) ** 0.5
+                #     complex_weights = u / d
+                #     likelihood_all_trajectories, _ = boltzman_likelihood(self.features, self.all_complex_trajectories, complex_weights)
+                #     likelihood_user_demo, r = boltzman_likelihood(self.features, complex_trajectories, complex_weights)
+                #     likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_trajectories)
+                #     bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
 
-                        new_samples.append(complex_weights)
-                        posterior.append(bayesian_update)
+                #     new_samples.append(complex_weights)
+                #     posterior.append(bayesian_update)
 
-                    posterior = list(posterior / np.sum(posterior))
-                    max_posterior = max(posterior)
-                    self.weights = new_samples[posterior.index(max_posterior)]
-                    #print("Updated weights from", prev_weights, "to", self.weights)
+                # posterior = list(posterior / np.sum(posterior))
+                # max_posterior = max(posterior)
+                # self.weights = new_samples[posterior.index(max_posterior)]
 
-                    # compute new q values from new weights
-                    rewards = self.features.dot(self.weights)
-                    self.qf, _, _ = value_iteration(self.states, self.remaining_user_actions, common.transition, rewards, self.terminal_states)
-
-                else:
-                    # is mismatch is due to new features, add pop up window to ask the user about which feature to add
-                    self.setNewFeature = True
-
-                    while self.setNewFeature:
-                        placeholder = 1
-
-                    # update q values
-                    print(self.new_features)
+                # Max entropy approach
+                _, new_weights = maxent_irl(self.task, self.features, complex_trajectories, self.optim, self.init)
+                self.weights = new_weights
 
 
-                # for each iteration 
-                # determine current state based on detected action sequence
-                current_state = self.states[0]
-                for user_action in self.user_sequence + new_detected_sequence[0:count]:
-                    # for i in range(self.action_counts[user_action]):
-                    p, next_state = common.transition(current_state, user_action)
-                    current_state = next_state
+                # compute new q values from new weights
+                rewards = self.features.dot(self.weights)
+                self.qf, _, _ = value_iteration(self.states, self.remaining_user_actions, self.task.transition, rewards, self.task.terminal_idx)
+                print(np.array_equal(prev_weights, self.weights))
 
-                self.remaining_user_actions.remove(new_a)
+            else:
+                # is mismatch is due to new features, add pop up window to ask the user about which feature to add
+                self.setNewFeature = True
 
-                # ---------------------------------------- Anticipate next user action --------------------------------------- #
-                self.available_actions, self.anticipated_actions = self.calculate_anticipated_action(current_state, self.remaining_user_actions)
+                while self.setNewFeature:
+                    placeholder = 1
+
+                # update q values
+                #print(self.new_features)
+
+
+            # for each iteration 
+            # determine current state based on detected action sequence
+            current_state = self.states[0]
+            for user_action in self.user_sequence + new_detected_sequence[0:count]:
+                # for i in range(self.action_counts[user_action]):
+                p, next_state = common.transition(current_state, user_action)
+                current_state = next_state
+
+            self.remaining_user_actions.remove(new_a)
+
+            # ---------------------------------------- Anticipate next user action --------------------------------------- #
+            self.available_actions, self.anticipated_actions = self.calculate_anticipated_action(current_state, self.remaining_user_actions)
 
         # ------------------------------------ Anticipate next user action with new weights ------------------------------------ #
 

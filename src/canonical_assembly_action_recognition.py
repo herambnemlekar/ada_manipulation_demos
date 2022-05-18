@@ -78,7 +78,12 @@ import numpy as np
 
 txt_dir = "./"
 
-tool_detected = False
+# global variables for detecting tool
+detect_tool = False
+detect_empty_tool = False
+last_empty_tool = False 
+tool_off_counter = 0.0
+starttime_tool = time.time()
 
 
 class Action:
@@ -107,7 +112,7 @@ class Action:
 #                Action([5], 'Insert long wire', [[25, 30]]), 
 #                ]
 
-parts_list = {"18": "tool",
+parts_list = {"17": "tool",
               "21": "long bolts",
               "22": "short bolts",
               "24": "short wire",
@@ -118,9 +123,9 @@ parts_list = {"18": "tool",
 
 # TODO: add flipped tags here
 actions_list = [Action([0], 'Insert long bolt', [[25, 21]]),
-               Action([3], 'Screw long bolt', [[18, 25, 21, 16]]),
+               Action([3], 'Screw long bolt', [[17, 25, 21, 16]]),
                Action([1], 'Insert short bolt', [[26, 22]]),
-               Action([4], 'Screw short bolt', [[18, 26, 22, 15]]),
+               Action([4], 'Screw short bolt', [[17, 26, 22, 15]]),
                Action([2], 'Insert short wire', [[26, 24]]),
                Action([5], 'Insert long wire', [[25, 30]]),
                ]
@@ -138,7 +143,8 @@ part_set = set()
 
 
 def detect_apriltag(gray, image, state):
-    global performed_actions, part_set, action_sequence, tool_detected
+    global performed_actions, part_set, action_sequence
+    global detect_tool, detect_empty_tool, last_empty_tool, tool_off_counter, starttime_tool
     
     ifRecord = False
 
@@ -149,19 +155,33 @@ def detect_apriltag(gray, image, state):
     # results = detector.detect(img=gray,True, camera_params=[544.021136,542.307110,308.111905,261.603373], tag_size=0.044)
     results = detector.detect(img=gray)
 
-    if len(results) > 0:
-        # print("[INFO] {} total AprilTags detected".format(len(results)))
-        useless = 0
-    else:
-        # print("No AprilTag Detected")
-        return image, ifRecord
+    # if len(results) > 0:
+    #     # print("[INFO] {} total AprilTags detected".format(len(results)))
+    #     useless = 0
+    # else:
+    #     # print("No AprilTag Detected")
+    #     return image, ifRecord
+
+    detect_tool = False 
+    detect_empty_tool = False
 
     # loop over the AprilTag detection results
     for r in results:
         # AprilTag state
-        if (r.tag_id == 18 or r.tag_id == 17) and tool_detected==False:
-            tool_detected = True
-        if r.tag_id > 32:
+        if r.tag_id == 18:
+            # tool box
+            # detect_tool = True 
+            if not 18 in part_set:
+                part_set.add(18)
+
+        elif r.tag_id == 17:
+            # tool empty tag
+            detect_tool = True 
+            detect_empty_tool = True
+            if not 17 in part_set:
+                part_set.add(17)
+        
+        elif r.tag_id > 32:
             print("tag id:",r.tag_id)
             continue
 
@@ -207,6 +227,20 @@ def detect_apriltag(gray, image, state):
 
     # print("[INFO] dist:",dist," tag pose:",t)
 
+    # tool
+    if detect_empty_tool == False and last_empty_tool == True:
+        starttime_tool = time.time()
+    if detect_empty_tool == False and last_empty_tool == False:
+        tool_off_counter = time.time() - starttime_tool
+    if detect_empty_tool == False and tool_off_counter >= 3.0:
+        if 17 in part_set:
+            part_set.remove(17)
+    if detect_tool == False and tool_off_counter >= 3.0:
+        if 18 in part_set:
+            part_set.remove(18)
+
+    last_empty_tool = detect_empty_tool
+
     return image, ifRecord
 
 
@@ -220,7 +254,7 @@ def video_demo():
 
     ground_truth_action_sequence = [1,7,8,2,5,6]
 
-    capture = cv2.VideoCapture(-2)
+    capture = cv2.VideoCapture(-1)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     # capture.set(cv2.CAP_PROP_POS_FRAMES,6000)

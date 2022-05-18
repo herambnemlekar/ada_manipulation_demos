@@ -11,7 +11,9 @@ def value_iteration(states, actions, transition, rewards, terminal_states, delta
         terminal_states: index of terminal states
         rewards: list of rewards for each state
         delta: error threshold
+
     Returns: q-value for each state-action pair, value for each state, optimal actions in each state
+
     """
     vf = {s: 0 for s in range(len(states))}  # values
     op_actions = {s: 0 for s in range(len(states))}  # optimal actions
