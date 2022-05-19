@@ -219,7 +219,7 @@ class AssemblyController(QMainWindow):
         # load the variables for computing weights
         self.weights = np.array(pickle.load(open(directory_syspath + "/data/weights_" + user_id + ".p", "rb")))
         self.features = np.array(pickle.load(open(directory_syspath + "/data/features_" + user_id + ".p", "rb")))
-        self.task = np.array(pickle.load(open(directory_syspath + "/data/task_" + user_id + ".p", "rb")))
+        self.task = pickle.load(open(directory_syspath + "/data/task_" + user_id + ".p", "rb"))
 
         # actions in airplane assembly and objects required for each action
         self.all_user_actions = [0, 1, 2, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 6, 6, 6, 7]
@@ -247,7 +247,7 @@ class AssemblyController(QMainWindow):
 
         # irl parameters
         self.init = O.Constant(0.5)
-        self.optim = O.ExpSga(lr=O.linear_decay(lr0=0.5))
+        self.optim = O.ExpSga(lr=O.linear_decay(lr0=1e-1))
 
         # subscribe to action recognition
         sub_act = rospy.Subscriber("/april_tag_detection", Float64MultiArray, self.callback, queue_size=1)
@@ -515,7 +515,6 @@ class AssemblyController(QMainWindow):
 
                 future_actions = deepcopy(self.remaining_user_actions)
                 future_actions.remove(new_a)
-                print(self.states.index(sp))
                 ro = rollout_trajectory(self.qf, self.states, common.transition, future_actions, self.states.index(sp))
                 future_actions.append(new_a)
                 complex_user_demo = [detected_sequence[:self.time_step + count] + [new_a] + ro]
@@ -543,6 +542,7 @@ class AssemblyController(QMainWindow):
                 # self.weights = new_samples[posterior.index(max_posterior)]
 
                 # Max entropy approach
+                print(len(self.states),len(self.task.states))
                 _, new_weights = maxent_irl(self.task, self.features, complex_trajectories, self.optim, self.init)
                 self.weights = new_weights
 
@@ -550,7 +550,9 @@ class AssemblyController(QMainWindow):
                 # compute new q values from new weights
                 rewards = self.features.dot(self.weights)
                 self.qf, _, _ = value_iteration(self.states, self.remaining_user_actions, self.task.transition, rewards, self.task.terminal_idx)
-                print(np.array_equal(prev_weights, self.weights))
+                
+                weights_updated = not np.array_equal(prev_weights, self.weights)
+                print("Are weights updated", weights_updated)
 
             else:
                 # is mismatch is due to new features, add pop up window to ask the user about which feature to add

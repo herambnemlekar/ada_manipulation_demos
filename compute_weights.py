@@ -5,6 +5,7 @@ import numpy as np
 from copy import deepcopy
 import pandas as pd
 import pickle
+import dill
 
 # import functions
 import src.optimizer as O  # stochastic gradient descent optimizer
